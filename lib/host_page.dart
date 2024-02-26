@@ -1,11 +1,9 @@
 import 'dart:ffi';
 import 'dart:io';
-
 import 'package:filesystem_picker/filesystem_picker.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'host_stream_page.dart';
-import 'receive_stream_page.dart';
+
 import 'package:flutter_p2p_connection/flutter_p2p_connection.dart';
 
 void main() {
@@ -42,22 +40,6 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   WifiP2PInfo? wifiP2PInfo;
   StreamSubscription<WifiP2PInfo>? _streamWifiInfo;
   StreamSubscription<List<DiscoveredPeers>>? _streamPeers;
-
-  Future<void> startStreaming() async {
-    // Navigate to host stream page
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const HostStreamPage()),
-    );
-  }
-
-  Future<void> receiveStreaming() async {
-    // Navigate to client stream page
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => ReceiveStreamPage()),
-    );
-  }
 
   @override
   void initState() {
