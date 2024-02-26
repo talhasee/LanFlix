@@ -1,0 +1,22 @@
+name: streamer
+description: "A new Flutter project."
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  filesystem_picker: ^4.1.0
+  flutter:
+    sdk: flutter
+  flutter_p2p_connection: ^2.0.1
+  flutter_webrtc: ^0.9.48+hotfix.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
