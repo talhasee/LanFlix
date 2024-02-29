@@ -1,4 +1,3 @@
-import 'dart:ffi';
 import 'dart:io';
 import 'package:filesystem_picker/filesystem_picker.dart';
 import 'package:flutter/material.dart';
@@ -38,7 +37,9 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   final _flutterP2pConnectionPlugin = FlutterP2pConnection();
   List<DiscoveredPeers> peers = [];
   WifiP2PInfo? wifiP2PInfo;
+  // ignore: unused_field
   StreamSubscription<WifiP2PInfo>? _streamWifiInfo;
+  // ignore: unused_field
   StreamSubscription<List<DiscoveredPeers>>? _streamPeers;
 
   @override

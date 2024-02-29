@@ -9,11 +9,17 @@
             "request": "launch",
             "type": "dart"
         },
+        // {
+        //     "name": "Redmi",
+        //     "request": "launch",
+        //     "type": "dart",
+        //     "deviceId": "4b13b75a"
+        // },
         {
             "name": "Redmi",
             "request": "launch",
             "type": "dart",
-            "deviceId": "4b13b75a"
+            "deviceId": "192.168.29.198:38839"
         },
         {
             "name": "Oppo",
