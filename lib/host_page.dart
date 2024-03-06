@@ -42,6 +42,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   // ignore: unused_field
   StreamSubscription<List<DiscoveredPeers>>? _streamPeers;
 
+  late Future<String> _addressFuture = Future.value("Creating....");
   @override
   void initState() {
     super.initState();
@@ -79,20 +80,49 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         peers = event;
       });
     });
+
+    //check location, wifi and Storage permission
+    checkPermissions();
+
+    _addressFuture = groupCreation();
   }
 
-  //Get Clients
+  Future<String> groupCreation() async {
+    //removing groups if there are any which was formed earlier
 
-  List getClients() {
-    List clientsList = [];
-    if (wifiP2PInfo != null) {
-      for (var clients in wifiP2PInfo!.clients) {
-        clientsList.add(clients.deviceName);
-      }
-      return clientsList;
-    } else {
-      return [];
+    /*
+    Below there is a jugaad of introducing a 2 sec delay after each 
+    function call, create group and remove group will wait for each
+    other.
+    */
+
+    //starting group formation
+    bool? created = await createGroup();
+
+    snack("CREATION1 $created");
+    await Future.delayed(const Duration(seconds: 2));
+    if (created != null && !created) {
+      bool? removed = await removeGroup();
     }
+
+    await Future.delayed(const Duration(seconds: 2));
+    bool? createdAgain = await createGroup();
+    snack("CREATION2 $createdAgain");
+    await Future.delayed(const Duration(seconds: 2));
+
+    if (createdAgain) {
+      //start socket so that whenever client comes no need to connect it manually
+      // bool? discovering = await discover();
+      // snack("discovering $discovering");
+      discover();
+      startSocket();
+    }
+    String addr = (wifiP2PInfo?.groupOwnerAddress).toString();
+    return addr;
+  }
+
+  Future<bool> discover() async {
+    return await _flutterP2pConnectionPlugin.discover();
   }
 
   //Check Location Enabled
@@ -120,7 +150,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   //Enable Location
 
   Future<bool> enableLocation() async {
-    //First check Location Permission and if it is enabled or not
+    //First check Location Permission and it is enabled or not
     return (await _flutterP2pConnectionPlugin.enableLocationServices());
   }
 
@@ -128,7 +158,93 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
 
   Future<bool> enableWifi() async {
     //First check if it is enabled or not
-    return (await _flutterP2pConnectionPlugin.enableLocationServices());
+    return (await _flutterP2pConnectionPlugin.enableWifiServices());
+  }
+
+  Future<bool> locationPermission() async {
+    bool location = false;
+    await askLocationPermission().then((locationPermission) async {
+      if (!locationPermission) {
+        snack("Please provide Location Permission to continue");
+      } else {
+        await isLocationEnabled().then((locationEnabled) async {
+          //if location not Enabled ask user to turn it on
+          if (!locationEnabled) {
+            await enableLocation().then((locationOn) {
+              if (!locationOn) {
+                snack("Please turn on the location to continue");
+              } else {
+                location = locationOn;
+              }
+            });
+          } else {
+            location = locationEnabled;
+          }
+        });
+      }
+    }).catchError((error) {
+      throw Exception('Error in Location: $error');
+    });
+    return location;
+  }
+
+  Future<bool> wifiPermission() async {
+    bool wifi = false;
+    await isWifiEnabled().then((wifiEnabled) async {
+      if (!wifiEnabled) {
+        await enableWifi().then((wifiOn) {
+          if (!wifiOn) {
+            snack("Please turn on Wifi to continue....");
+          } else {
+            // snack("wifi is on");
+            wifi = wifiOn;
+          }
+        });
+      } else {
+        wifi = wifiEnabled;
+      }
+    }).catchError((error) {
+      throw Exception('Error in Wifi: $error');
+    });
+
+    return wifi;
+  }
+
+  Future<bool> storagePermission() async {
+    bool storage = false;
+    await askStoragePermission().then((storageEnabled) {
+      if (!storageEnabled) {
+        snack("Please give storage permission for selecting video files");
+      } else {
+        storage = storageEnabled;
+      }
+    }).catchError((error) {
+      throw Exception("Storage Error: $error");
+    });
+
+    return storage;
+  }
+
+  Future<bool> checkPermissions() async {
+    //checking location permission
+    bool location = await locationPermission();
+    bool wifi = await wifiPermission();
+    bool storage = await storagePermission();
+    snack("$location, $wifi, $storage");
+    return location && wifi && storage;
+  }
+
+  //Get Clients
+  List getClients() {
+    List clientsList = [];
+    if (wifiP2PInfo != null) {
+      for (var clients in wifiP2PInfo!.clients) {
+        clientsList.add(clients.deviceName);
+      }
+      return clientsList;
+    } else {
+      return [];
+    }
   }
 
   //create group
@@ -141,8 +257,8 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       bool enabledLocation = await isLocationEnabled();
       bool? groupFormed = wifiP2PInfo?.groupFormed;
       if (enabledLocation && (groupFormed == null || groupFormed == false)) {
-        snack("Creating group $enabledLocation,  $groupFormed");
         bool groupDeletion = await _flutterP2pConnectionPlugin.createGroup();
+        snack("Creating group $enabledLocation,  $groupFormed, $groupDeletion");
         return groupDeletion;
       } else if (!enabledLocation) {
         snack("Please turn on Location!! $enabledLocation,  $groupFormed");
@@ -181,8 +297,8 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       bool enabledLocation = await isLocationEnabled();
       bool? groupFormed = wifiP2PInfo?.groupFormed;
       if (enabledLocation && (groupFormed != null && groupFormed == true)) {
-        snack("Removing group $enabledLocation,  $groupFormed");
         bool groupDeletion = await _flutterP2pConnectionPlugin.removeGroup();
+        snack("Removing group $enabledLocation,  $groupFormed, $groupDeletion");
         return groupDeletion;
       } else if (!enabledLocation) {
         snack("Please turn on Location!! $enabledLocation,  $groupFormed");
@@ -209,10 +325,6 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     }
     // snack("Remove old group first!!!");
     return false;
-
-    // bool removed = await _flutterP2pConnectionPlugin.removeGroup();
-
-    // return removed;
   }
 
   Future startSocket() async {
@@ -320,211 +432,65 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.green[300],
-      appBar: AppBar(
-        backgroundColor: const Color.fromARGB(255, 5, 197, 78),
-        title: const Text('Flutter p2p connection plugin'),
-      ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Text(
-                "IP: ${wifiP2PInfo == null ? "null" : wifiP2PInfo?.groupOwnerAddress}"),
-            wifiP2PInfo != null
-                ? Text(
-                    "connected: ${wifiP2PInfo?.isConnected}, isGroupOwner: ${wifiP2PInfo?.isGroupOwner}, groupFormed: ${wifiP2PInfo?.groupFormed}, groupOwnerAddress: ${wifiP2PInfo?.groupOwnerAddress}, clients: ${getClients()}",
-                  )
-                : const SizedBox.shrink(),
-            const SizedBox(height: 10),
-            const Text("PEERS:"),
-            SizedBox(
-              height: 100,
-              width: MediaQuery.of(context).size.width,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: peers.length,
-                itemBuilder: (context, index) => Center(
-                  child: GestureDetector(
-                    onTap: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => Center(
-                          child: AlertDialog(
-                            content: SizedBox(
-                              height: 200,
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text("name: ${peers[index].deviceName}"),
-                                  Text(
-                                      "address: ${peers[index].deviceAddress}"),
-                                  Text(
-                                      "isGroupOwner: ${peers[index].isGroupOwner}"),
-                                  Text(
-                                      "isServiceDiscoveryCapable: ${peers[index].isServiceDiscoveryCapable}"),
-                                  Text(
-                                      "primaryDeviceType: ${peers[index].primaryDeviceType}"),
-                                  Text(
-                                      "secondaryDeviceType: ${peers[index].secondaryDeviceType}"),
-                                  Text("status: ${peers[index].status}"),
-                                ],
-                              ),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () async {
-                                  Navigator.of(context).pop();
-                                  bool? bo = await _flutterP2pConnectionPlugin
-                                      .connect(peers[index].deviceAddress);
-                                  snack("connected: $bo");
-                                },
-                                child: const Text("connect"),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      height: 80,
-                      width: 80,
-                      decoration: BoxDecoration(
-                        color: Colors.grey,
-                        borderRadius: BorderRadius.circular(50),
-                      ),
-                      child: Center(
-                        child: Text(
-                          peers[index]
-                              .deviceName
-                              .toString()
-                              .characters
-                              .first
-                              .toUpperCase(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 30,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                bool? created = await createGroup();
-                snack("created group: $created");
-              },
-              child: const Text("create group"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                bool? removed = await removeGroup();
-                snack("removed group: $removed");
-              },
-              child: const Text("remove group/disconnect"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                var info = await _flutterP2pConnectionPlugin.groupInfo();
-                showDialog(
-                  context: context,
-                  builder: (context) => Center(
-                    child: Dialog(
-                      child: SizedBox(
-                        height: 200,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                  "groupNetworkName: ${info?.groupNetworkName}"),
-                              Text("passPhrase: ${info?.passPhrase}"),
-                              Text("isGroupOwner: ${info?.isGroupOwner}"),
-                              Text("clients: ${getClients()}"),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-              child: const Text("get group info"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                String? ip = await _flutterP2pConnectionPlugin.getIPAddress();
-                snack("ip: $ip");
-              },
-              child: const Text("get ip"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                bool? discovering =
-                    await _flutterP2pConnectionPlugin.discover();
-                snack("discovering $discovering");
-              },
-              child: const Text("discover"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                bool? stopped =
-                    await _flutterP2pConnectionPlugin.stopDiscovery();
-                snack("stopped discovering $stopped");
-              },
-              child: const Text("stop discovery"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                startSocket();
-              },
-              child: const Text("open a socket"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                connectToSocket();
-              },
-              child: const Text("connect to socket"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                closeSocketConnection();
-              },
-              child: const Text("close socket"),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(
-                  20.0), // Adjust the padding values as needed
-              child: TextField(
-                controller: msgText,
-                decoration: const InputDecoration(
-                  hintText: "Message",
-                ),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                sendMessage();
-              },
-              child: const Text("send msg"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                sendFile(true);
-              },
-              child: const Text("send File from phone"),
-            ),
-          ],
+        backgroundColor: Colors.green[300],
+        appBar: AppBar(
+          backgroundColor: const Color.fromARGB(255, 5, 197, 78),
+          title: const Text('Flutter p2p connection plugin'),
         ),
-      ),
-    );
+        // ignore: prefer_const_constructors
+        body: Center(
+          // ignore: prefer_const_constructors
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            // ignore: prefer_const_literals_to_create_immutables
+            children: [
+              FutureBuilder<String>(
+                future: _addressFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Fetching group owner address...',
+                          style: TextStyle(fontSize: 24),
+                        ),
+                        SizedBox(
+                            height:
+                                20), // Add some space between text and loading animation
+                        CircularProgressIndicator(),
+                      ],
+                    );
+                  } else if (snapshot.hasError) {
+                    return Text(
+                        style: TextStyle(fontSize: 24),
+                        'Error during group creation: ${snapshot.error}');
+                  } else {
+                    return Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(
+                          'Group Owner Address',
+                          style: TextStyle(fontSize: 24),
+                        ),
+                        const SizedBox(
+                            height:
+                                20),
+                         Text(
+                          '${snapshot.data}',
+                          style: TextStyle(fontSize: 24),
+                        ),
+                      ],
+                    );
+                  }
+                },
+              ),
+
+              // Text("Host Ip: ${groupCreation()}"),
+              // // ignore: prefer_const_constructors
+              // Text("Device Name: ${wifiP2PInfo?.groupOwnerAddress}"),
+            ],
+          ),
+        ));
   }
 }
