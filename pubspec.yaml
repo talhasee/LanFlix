@@ -13,6 +13,8 @@ dependencies:
     sdk: flutter
   flutter_p2p_connection: ^2.0.1
   flutter_webrtc: ^0.9.48+hotfix.1
+  restart_app: ^1.2.1
+  shared_preferences: ^2.2.2
 
 dev_dependencies:
   flutter_test:

@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:filesystem_picker/filesystem_picker.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
-
+import 'package:restart_app/restart_app.dart';
 import 'package:flutter_p2p_connection/flutter_p2p_connection.dart';
 
 void main() {
@@ -48,6 +48,11 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _init();
+  }
+
+  void _restartApp() {
+    // Restart the app
+    Restart.restartApp();
   }
 
   @override
@@ -100,7 +105,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     bool? created = await createGroup();
 
     snack("CREATION1 $created");
-    await Future.delayed(const Duration(seconds: 2));
+    await Future.delayed(const Duration(seconds: 3));
     if (created != null && !created) {
       bool? removed = await removeGroup();
     }
@@ -461,10 +466,32 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                         CircularProgressIndicator(),
                       ],
                     );
-                  } else if (snapshot.hasError) {
-                    return Text(
-                        style: TextStyle(fontSize: 24),
-                        'Error during group creation: ${snapshot.error}');
+                  } else if (snapshot.hasError|| snapshot.data == null || snapshot.data == "null") {
+                    // If snapshot has error or data is null, show alert and restart the app
+                    WidgetsBinding.instance!.addPostFrameCallback((_) {
+                      showDialog(
+                        context: context,
+                        barrierDismissible:
+                            false, // Prevent dismissing dialog by tapping outside
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: const Text('Error'),
+                            content: const Text(
+                                'Please restart your WiFi and open the app again.'),
+                            actions: <Widget>[
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                  _restartApp();
+                                },
+                                child: const Text('OK'),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    });
+                    return Container();
                   } else {
                     return Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -473,10 +500,8 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                           'Group Owner Address',
                           style: TextStyle(fontSize: 24),
                         ),
-                        const SizedBox(
-                            height:
-                                20),
-                         Text(
+                        const SizedBox(height: 20),
+                        Text(
                           '${snapshot.data}',
                           style: TextStyle(fontSize: 24),
                         ),
@@ -485,6 +510,18 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                   }
                 },
               ),
+              // ElevatedButton(
+              //   onPressed: () async {
+              //     removeGroup();
+              //   },
+              //   child: const Text("remove"),
+              // ),
+              // ElevatedButton(
+              //   onPressed: () async {
+              //     createGroup();
+              //   },
+              //   child: const Text("create"),
+              // ),
 
               // Text("Host Ip: ${groupCreation()}"),
               // // ignore: prefer_const_constructors
