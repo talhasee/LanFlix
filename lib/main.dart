@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'client_page.dart';
-import 'host_page.dart';
+import 'client/client_page.dart';
+import 'host/host_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -31,7 +31,6 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
-
   Future<void> hostPageDirect() async {
     // Navigate to host stream page
     Navigator.push(
@@ -65,7 +64,6 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                   child: Text(
                     "Host",
                     style: TextStyle(color: Colors.white, fontSize: 44),
-
                   ),
                 ),
               ),
