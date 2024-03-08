@@ -54,6 +54,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   }
 
   void _restartApp() {
+    dispose();
     // Restart the app
     Restart.restartApp();
   }
@@ -61,16 +62,26 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _flutterP2pConnectionPlugin.unregister();
     super.dispose();
+    _flutterP2pConnectionPlugin.removeGroup();
+    _flutterP2pConnectionPlugin.unregister();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused) {
-      _flutterP2pConnectionPlugin.unregister();
-    } else if (state == AppLifecycleState.resumed) {
-      _flutterP2pConnectionPlugin.register();
+    super.didChangeAppLifecycleState(state);
+    switch (state) {
+      case AppLifecycleState.resumed:
+        _flutterP2pConnectionPlugin.register();
+        break;
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.paused:
+        _flutterP2pConnectionPlugin.unregister();
+        break;
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.detached:
+        dispose();
+        break;
     }
   }
 
@@ -110,18 +121,16 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     */
 
     //starting group formation
-    bool? created = await createGroup();
+    bool created = await createGroup();
 
     snack("CREATION1 $created");
-    await Future.delayed(const Duration(seconds: 3));
-    if (created != null && !created) {
-      bool? removed = await removeGroup();
+    if (!created) {
+      await removeGroup();
     }
 
     await Future.delayed(const Duration(seconds: 2));
-    bool? createdAgain = await createGroup();
+    bool createdAgain = await createGroup();
     snack("CREATION2 $createdAgain");
-    await Future.delayed(const Duration(seconds: 2));
 
     if (createdAgain) {
       //start socket so that whenever client comes no need to connect it manually
