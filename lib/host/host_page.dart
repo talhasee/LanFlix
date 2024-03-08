@@ -92,10 +92,11 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     permissions =
         // ignore: use_build_context_synchronously
         Permissions(p2pObj: _flutterP2pConnectionPlugin, context: context);
-
     //check location, wifi and Storage permission
-    permissions.checkPermissions();
-
+    bool hasPermission = await permissions.checkPermissions();
+    if (!hasPermission) {
+      snack("Permission de de chup chap se varna phone hack hoga tera");
+    }
     _addressFuture = groupCreation();
   }
 
@@ -140,37 +141,17 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   //create group
 
   Future<bool> createGroup() async {
-    bool location = await permissions.askLocationPermission();
-    bool wifi = await permissions.isWifiEnabled();
-
-    if (location && wifi) {
-      bool enabledLocation = await permissions.isLocationEnabled();
-      bool? groupFormed = wifiP2PInfo?.groupFormed;
-      if (enabledLocation && (groupFormed == null || groupFormed == false)) {
-        bool groupDeletion = await _flutterP2pConnectionPlugin.createGroup();
-        snack("Creating group $enabledLocation,  $groupFormed, $groupDeletion");
-        return groupDeletion;
-      } else if (!enabledLocation) {
-        snack("Please turn on Location!! $enabledLocation,  $groupFormed");
-        permissions.enableLocation();
-      } else if (groupFormed != null && groupFormed) {
-        snack("Please remove or disconnect earlier group!!");
-        return false;
-      }
-    } else {
-      if (!location) {
-        permissions.askLocationPermission();
-        bool enabledLocation = await permissions.isLocationEnabled();
-        if (!enabledLocation) {
-          snack("Please enable Location first!!!");
-          permissions.enableLocation();
-          return false;
-        }
-      }
-      if (!wifi) {
-        snack("Please enable Wifi!!");
-        permissions.enableWifi();
-      }
+    bool enabledLocation = await permissions.isLocationEnabled();
+    bool? groupFormed = wifiP2PInfo?.groupFormed;
+    if (enabledLocation && (groupFormed == null || groupFormed == false)) {
+      bool groupDeletion = await _flutterP2pConnectionPlugin.createGroup();
+      snack("Creating group $enabledLocation,  $groupFormed, $groupDeletion");
+      return groupDeletion;
+    } else if (!enabledLocation) {
+      snack("Please turn on Location!! $enabledLocation,  $groupFormed");
+      permissions.enableLocation();
+    } else if (groupFormed != null && groupFormed) {
+      snack("Please remove or disconnect earlier group!!");
       return false;
     }
     // snack("Remove old group first!!!");
@@ -180,37 +161,18 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   //remove Group
 
   Future<bool> removeGroup() async {
-    bool location = await permissions.askLocationPermission();
-    bool wifi = await permissions.isWifiEnabled();
-
-    if (location && wifi) {
-      bool enabledLocation = await permissions.isLocationEnabled();
-      bool? groupFormed = wifiP2PInfo?.groupFormed;
-      if (enabledLocation && (groupFormed != null && groupFormed == true)) {
-        bool groupDeletion = await _flutterP2pConnectionPlugin.removeGroup();
-        snack("Removing group $enabledLocation,  $groupFormed, $groupDeletion");
-        return groupDeletion;
-      } else if (!enabledLocation) {
-        snack("Please turn on Location!! $enabledLocation,  $groupFormed");
-        permissions.enableLocation();
-        return false;
-      } else if (groupFormed == null || groupFormed == false) {
-        snack("No group to remove!!");
-        return false;
-      }
-    } else {
-      if (!location) {
-        permissions.askLocationPermission();
-        bool enabledLocation = await permissions.isLocationEnabled();
-        if (!enabledLocation) {
-          snack("Please enable Location first!!!");
-          permissions.enableLocation();
-        }
-      }
-      if (!wifi) {
-        snack("Please enable Wifi!!");
-        permissions.enableWifi();
-      }
+    bool enabledLocation = await permissions.isLocationEnabled();
+    bool? groupFormed = wifiP2PInfo?.groupFormed;
+    if (enabledLocation && (groupFormed != null && groupFormed == true)) {
+      bool groupDeletion = await _flutterP2pConnectionPlugin.removeGroup();
+      snack("Removing group $enabledLocation,  $groupFormed, $groupDeletion");
+      return groupDeletion;
+    } else if (!enabledLocation) {
+      snack("Please turn on Location!! $enabledLocation,  $groupFormed");
+      permissions.enableLocation();
+      return false;
+    } else if (groupFormed == null || groupFormed == false) {
+      snack("No group to remove!!");
       return false;
     }
     // snack("Remove old group first!!!");

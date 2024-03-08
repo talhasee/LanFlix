@@ -4,6 +4,7 @@ import 'package:filesystem_picker/filesystem_picker.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter_p2p_connection/flutter_p2p_connection.dart';
+import 'package:streamer/utils/permissions.dart';
 
 void main() {
   runApp(const ClientPage());
@@ -35,6 +36,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   final TextEditingController msgText = TextEditingController();
   final _flutterP2pConnectionPlugin = FlutterP2pConnection();
+  late final Permissions permissions;
   List<DiscoveredPeers> peers = [];
   WifiP2PInfo? wifiP2PInfo;
   StreamSubscription<WifiP2PInfo>? _streamWifiInfo;
@@ -77,6 +79,11 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         peers = event;
       });
     });
+    permissions = Permissions(
+        p2pObj: _flutterP2pConnectionPlugin,
+        // ignore: use_build_context_synchronously
+        context: context);
+    permissions.checkPermissions();
   }
 
   //Get Clients
@@ -91,42 +98,6 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     } else {
       return [];
     }
-  }
-
-  //Check Location Enabled
-  Future<bool> isLocationEnabled() async {
-    return (await _flutterP2pConnectionPlugin.checkLocationEnabled());
-  }
-
-  //Check Wifi Enabled
-  Future<bool> isWifiEnabled() async {
-    return (await _flutterP2pConnectionPlugin.checkWifiEnabled());
-  }
-
-  //Ask Location Permssion
-
-  Future<bool> askLocationPermission() async {
-    return (await _flutterP2pConnectionPlugin.askLocationPermission());
-  }
-
-  //Ask Storage Permission
-
-  Future<bool> askStoragePermission() async {
-    return (await _flutterP2pConnectionPlugin.askStoragePermission());
-  }
-
-  //Enable Location
-
-  Future<bool> enableLocation() async {
-    //First check Location Permission and if it is enabled or not
-    return (await _flutterP2pConnectionPlugin.enableLocationServices());
-  }
-
-  //Enable Wifi
-
-  Future<bool> enableWifi() async {
-    //First check if it is enabled or not
-    return (await _flutterP2pConnectionPlugin.enableLocationServices());
   }
 
   Future startSocket() async {

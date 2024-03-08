@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_p2p_connection/flutter_p2p_connection.dart';
 
 class Permissions {
@@ -6,6 +8,11 @@ class Permissions {
   final BuildContext context;
 
   Permissions({required this.p2pObj, required this.context});
+
+  Future<String?> getAndroidVersion() async {
+    AndroidDeviceInfo androidInfo = await DeviceInfoPlugin().androidInfo;
+    return androidInfo.version.release;
+  }
 
   void snack(String msg) async {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -23,35 +30,36 @@ class Permissions {
     return (await p2pObj.checkLocationEnabled());
   }
 
-  //Check Wifi Enabled
-  Future<bool> isWifiEnabled() async {
-    return (await p2pObj.checkWifiEnabled());
-  }
-
-  //Ask Location Permssion
-
-  Future<bool> askLocationPermission() async {
-    return (await p2pObj.askLocationPermission());
-  }
-
-  //Ask Storage Permission
-
-  Future<bool> askStoragePermission() async {
-    return (await p2pObj.askStoragePermission());
-  }
-
   //Enable Location
-
   Future<bool> enableLocation() async {
     //First check Location Permission and it is enabled or not
     return (await p2pObj.enableLocationServices());
   }
 
-  //Enable Wifi
+  //Ask Location Permssion
+  Future<bool> askLocationPermission() async {
+    return (await p2pObj.askLocationPermission());
+  }
 
+  //Check Wifi Enabled
+  Future<bool> isWifiEnabled() async {
+    return (await p2pObj.checkWifiEnabled());
+  }
+
+  //Enable Wifi
   Future<bool> enableWifi() async {
     //First check if it is enabled or not
     return (await p2pObj.enableWifiServices());
+  }
+
+  //Ask Storage Permission
+  Future<bool> askStoragePermission() async {
+    return (await p2pObj.askStoragePermission());
+  }
+
+  //Enable enarby devices
+  Future<bool> enableNearbyDevices() async {
+    return (await Permission.nearbyWifiDevices.request().isGranted);
   }
 
   Future<bool> locationPermission() async {
@@ -120,10 +128,16 @@ class Permissions {
 
   Future<bool> checkPermissions() async {
     //checking location permission
-    bool location = await locationPermission();
-    bool wifi = await wifiPermission();
+    bool location = await locationPermission() &&
+        (await isLocationEnabled() ? true : await enableLocation());
+    bool wifi = await wifiPermission() &&
+        (await isWifiEnabled() ? true : await enableWifi());
     bool storage = await storagePermission();
-    snack("$location, $wifi, $storage");
-    return location && wifi && storage;
+    bool nearbyDevices = int.parse(await getAndroidVersion() ?? '0') >= 12
+        ? await enableNearbyDevices()
+        : true;
+    snack(
+        "location $location,wifi $wifi, storage $storage, nearby $nearbyDevices");
+    return location && wifi && storage && nearbyDevices;
   }
 }
