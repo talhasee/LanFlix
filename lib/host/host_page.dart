@@ -1,5 +1,7 @@
 import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:filesystem_picker/filesystem_picker.dart';
+import 'package:logger/logger.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:restart_app/restart_app.dart';
@@ -70,19 +72,25 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    switch (state) {
-      case AppLifecycleState.resumed:
-        _flutterP2pConnectionPlugin.register();
-        break;
-      case AppLifecycleState.inactive:
-      case AppLifecycleState.paused:
-        _flutterP2pConnectionPlugin.unregister();
-        break;
-      case AppLifecycleState.hidden:
-      case AppLifecycleState.detached:
-        dispose();
-        break;
+    if (state == AppLifecycleState.paused) {
+      _flutterP2pConnectionPlugin.unregister();
+    } else if (state == AppLifecycleState.resumed) {
+      _flutterP2pConnectionPlugin.register();
     }
+
+    // switch (state) {
+    //   case AppLifecycleState.resumed:
+    //     _flutterP2pConnectionPlugin.register();
+    //     break;
+    //   case AppLifecycleState.inactive:
+    //   case AppLifecycleState.paused:
+    //     _flutterP2pConnectionPlugin.unregister();
+    //     break;
+    //   case AppLifecycleState.hidden:
+    //   case AppLifecycleState.detached:
+    //     // dispose();
+    //     // break;
+    // }
   }
 
   void _init() async {
@@ -256,19 +264,30 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   }
 
   Future sendFile(bool phone) async {
-    String? filePath = await FilesystemPicker.open(
-      context: context,
-      rootDirectory: Directory(phone ? "/storage/emulated/0/" : "/storage/"),
-      fsType: FilesystemType.file,
-      fileTileSelectMode: FileTileSelectMode.wholeTile,
-      showGoUp: true,
-      folderIconColor: Colors.blue,
-    );
-    if (filePath == null) return;
+    // String? filePath = await FilesystemPicker.open(
+    //   context: context,
+    //   rootDirectory: Directory(phone ? "/storage/emulated/0/" : "/storage/"),
+    //   fsType: FilesystemType.file,
+    //   fileTileSelectMode: FileTileSelectMode.wholeTile,
+    //   showGoUp: true,
+    //   folderIconColor: Colors.blue,
+    // );
+    FilePickerResult? result = await FilePicker.platform.pickFiles();
+    if (result == null) {
+      snack("Please select a File");
+      return;
+    }
+    PlatformFile file = result.files.first;
+    if (file.path == null) {
+      return;
+    }
+    snack("File Name: ${file.name}");
+    snack("File Path: ${file.path}");
+    // if (filePath == null) return;
     List<TransferUpdate>? updates =
         await _flutterP2pConnectionPlugin.sendFiletoSocket(
       [
-        filePath,
+        (file.path).toString(),
         // "/storage/emulated/0/Download/Likee_7100105253123033459.mp4",
         // "/storage/0E64-4628/Download/Adele-Set-Fire-To-The-Rain-via-Naijafinix.com_.mp3",
         // "/storage/0E64-4628/Flutter SDK/p2p_plugin.apk",
@@ -289,6 +308,10 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       ),
     );
   }
+
+  var logger = Logger(
+    printer: PrettyPrinter(),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -368,6 +391,20 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                   }
                 },
               ),
+              ElevatedButton(
+                  onPressed: () async {
+                    FilePickerResult? result =
+                        await FilePicker.platform.pickFiles();
+                    if (result != null) {
+                      PlatformFile file = result.files.first;
+                      print("File Name: ${file.name}\nFile Path: ${file.path}");
+                      logger.d(
+                          "File Name: ${file.name}\nFile Path: ${file.path}");
+                      snack("File Name: ${file.name}");
+                      snack("File Path: ${file.path}");
+                    }
+                  },
+                  child: const Text("File Select"))
             ],
           ),
         ));
