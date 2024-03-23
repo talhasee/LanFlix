@@ -1,12 +1,15 @@
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
-import 'package:filesystem_picker/filesystem_picker.dart';
 import 'package:logger/logger.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:restart_app/restart_app.dart';
 import 'package:flutter_p2p_connection/flutter_p2p_connection.dart';
 import '../utils/permissions.dart';
+import 'package:shelf/shelf.dart' as shelf;
+import 'package:shelf/shelf_io.dart' as shelf_io;
+import 'package:flutter_ffmpeg/flutter_ffmpeg.dart';
+import 'package:path/path.dart' as p;
 
 void main() {
   runApp(const HostPage());
@@ -47,6 +50,9 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   // ignore: unused_field
   StreamSubscription<List<DiscoveredPeers>>? _streamPeers;
 
+  String videoPath = "";
+  HttpServer? server;
+
   late Future<String> _addressFuture = Future.value("Creating....");
   @override
   void initState() {
@@ -63,6 +69,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    closeServer();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
     _flutterP2pConnectionPlugin.removeGroup();
@@ -73,7 +80,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.paused) {
-      _flutterP2pConnectionPlugin.unregister();
+      // _flutterP2pConnectionPlugin.unregister();
     } else if (state == AppLifecycleState.resumed) {
       _flutterP2pConnectionPlugin.register();
     }
@@ -140,7 +147,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     bool createdAgain = await createGroup();
     snack("CREATION2 $createdAgain");
 
-    if (createdAgain) {
+    if (createdAgain || created) {
       //start socket so that whenever client comes no need to connect it manually
       // bool? discovering = await discover();
       // snack("discovering $discovering");
@@ -155,6 +162,89 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     return await _flutterP2pConnectionPlugin.discover();
   }
 
+  Future<shelf.Response> _handleRequest(shelf.Request request) async {
+    logger.d("INSIDE HANDLER REQUEST ${request.url.path}");
+    if (request.url.path == 'video/stream') {
+      // Assuming videoFilePath is the path to the selected video file
+      String videoFilePath = videoPath;
+      logger.d("Video File path - $videoFilePath");
+
+      // Get the directory of the video file
+      String videoDirectory = p.dirname(videoFilePath);
+      String outputDirectory = p.join(videoDirectory,
+          'hls_output'); // Output directory within the video directory
+      Directory(outputDirectory).createSync(
+          recursive: true); // Create the output directory if it doesn't exist
+
+      // Generate HLS content using flutter_ffmpeg
+      var ffmpeg = FlutterFFmpeg();
+      try {
+        //   await ffmpeg.execute(
+        //   '-i $videoFilePath -c:v libx264 -g 32 -sc_threshold 0 '
+        //   '-b:v 2500k -b:a 128k -ac 2 -ar 44100 -f hls -hls_time 10 -hls_list_size 0 '
+        //   '-hls_segment_filename $outputDirectory/%03d.ts $outputDirectory/index.m3u8',
+        // ); 
+        await ffmpeg.execute(
+    '-i $videoFilePath -c:v libx264 -b:v 1000k -r 30 -vf scale=1280:-1 -preset slow -f hls -hls_time 10 -hls_list_size 0 -hls_segment_filename $outputDirectory/%03d.ts $outputDirectory/index.m3u8',
+  );
+
+
+      } catch (e) {
+        logger.d("Error in ffmpeg - $e");
+        return shelf.Response.internalServerError(
+            body: 'Error processing video');
+      }
+
+      // Serve the HLS files from the output directory
+      var file = File(p.join(outputDirectory, 'index.m3u8'));
+      return shelf.Response.ok(await file.readAsString(),
+          headers: {'Content-Type': 'application/vnd.apple.mpegurl'});
+    } else {
+      return shelf.Response.notFound('Not Found');
+    }
+  }
+
+  void createShelfHandler() async {
+    var handler = const shelf.Pipeline()
+        .addMiddleware(shelf.logRequests())
+        .addHandler(_handleRequest);
+
+    // logger.d("${InternetAddress.anyIPv4}");
+
+    String? ip = await _flutterP2pConnectionPlugin.getIPAddress();
+    logger.d("FLUTTER IP - $ip");
+    sendDataAsMessage("&HOST_IP$ip");
+
+    try {
+      // Bind the handler to a port
+      server = await shelf_io.serve(handler, ip.toString(), 8080);
+      logger.d('HTTP Server listening on port 8080');
+    } catch (e) {
+      logger.d('Error starting HTTP server: $e');
+      // Handle the error, log it, or take appropriate action
+    }
+  }
+
+  void closeServer() {
+    if (server != null) {
+      server?.close();
+      logger.d("SERVER IS CLOSED");
+    }
+  }
+
+  void selectVideoFile() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles();
+    if (result == null) {
+      snack("Please select a File");
+      return;
+    }
+    PlatformFile file = result.files.first;
+    if (file.path == null) {
+      return;
+    }
+
+    videoPath = (file.path).toString();
+  }
   //create group
 
   Future<bool> createGroup() async {
@@ -261,6 +351,10 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
 
   Future sendMessage() async {
     _flutterP2pConnectionPlugin.sendStringToSocket(msgText.text);
+  }
+
+  Future sendDataAsMessage(String mssg) async {
+    _flutterP2pConnectionPlugin.sendStringToSocket(mssg);
   }
 
   Future sendFile(bool phone) async {
@@ -404,7 +498,12 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                       snack("File Path: ${file.path}");
                     }
                   },
-                  child: const Text("File Select"))
+                  child: const Text("File Select")),
+              ElevatedButton(
+                  onPressed: selectVideoFile, child: Text("Select Video File")),
+              ElevatedButton(
+                  onPressed: createShelfHandler,
+                  child: Text("Start Video server")),
             ],
           ),
         ));

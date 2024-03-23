@@ -1,10 +1,12 @@
 import 'dart:io';
-
+import 'package:chewie/chewie.dart';
 import 'package:filesystem_picker/filesystem_picker.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter_p2p_connection/flutter_p2p_connection.dart';
+import 'package:logger/logger.dart';
 import 'package:streamer/utils/permissions.dart';
+import 'package:video_player/video_player.dart';
 
 void main() {
   runApp(const ClientPage());
@@ -29,6 +31,8 @@ class _ClientPageState extends State<ClientPage> {
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
 
+  String? get videoUrl => null;
+
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
@@ -42,6 +46,13 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   StreamSubscription<WifiP2PInfo>? _streamWifiInfo;
   StreamSubscription<List<DiscoveredPeers>>? _streamPeers;
 
+  String host_ip_address = "";
+
+  String videoUrl = "";
+
+  VideoPlayerController? _videoPlayerController;
+  ChewieController? _chewieController;
+
   @override
   void initState() {
     super.initState();
@@ -51,6 +62,8 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _videoPlayerController?.dispose();
+    _chewieController?.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _flutterP2pConnectionPlugin.unregister();
     super.dispose();
@@ -147,6 +160,10 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         },
         receiveString: (req) async {
           snack(req);
+          String mssg = req;
+          if (mssg.startsWith("&HOST_IP")) {
+            host_ip_address = mssg.substring(8);
+          }
         },
       );
     }
@@ -201,6 +218,21 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       ),
     );
   }
+
+  void startInit() {
+    String serverURL = 'http://$host_ip_address:8080/video/stream';
+    _videoPlayerController =
+        VideoPlayerController.networkUrl(Uri.parse(serverURL));
+    _chewieController = ChewieController(
+      videoPlayerController: _videoPlayerController!,
+      aspectRatio: 16 / 9,
+      autoPlay: true,
+    );
+  }
+
+  var logger = Logger(
+    printer: PrettyPrinter(),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -392,6 +424,45 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                 sendFile(true);
               },
               child: const Text("send File from phone"),
+            ),
+            // ElevatedButton(
+            //   onPressed: () {
+            //     // Play HLS stream on button press
+            //     try {
+            //       startInit();
+            //       // VideoPlayerController controller =
+            //       //     VideoPlayerController.networkUrl(Uri.parse(serverURL));
+
+            //       // // Initialize and play the video
+            //       // controller.initialize().then((_) {
+            //       //   controller.play();
+            //       //   Navigator.push(
+            //       //     context,
+            //       //     MaterialPageRoute(
+            //       //       builder: (context) => VideoPlayer(controller),
+            //       //     ),
+            //       //   );
+            //       // });
+            //     } catch (e) {
+            //       logger.d("Error in playback - $e");
+            //     }
+            //   },
+            //   child: Chewie(
+            //     controller: _chewieController,
+            //   ),
+            // )
+            //
+            ElevatedButton(
+              onPressed: () {
+                startInit(); // Initialize controllers when button is clicked
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => Chewie(controller: _chewieController!),
+                  ),
+                );
+              },
+              child: const Text('Play HLS Stream'),
             ),
           ],
         ),
