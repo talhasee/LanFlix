@@ -19,7 +19,7 @@
             "name": "Redmi",
             "request": "launch",
             "type": "dart",
-            "deviceId": "192.168.29.198:43245"
+            "deviceId": "4b13b75a"
         },
         {
             "name": "Oppo",

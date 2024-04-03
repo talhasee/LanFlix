@@ -349,6 +349,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     );
   }
 
+
   Future sendMessage() async {
     _flutterP2pConnectionPlugin.sendStringToSocket(msgText.text);
   }
@@ -376,7 +377,6 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       return;
     }
     snack("File Name: ${file.name}");
-    snack("File Path: ${file.path}");
     // if (filePath == null) return;
     List<TransferUpdate>? updates =
         await _flutterP2pConnectionPlugin.sendFiletoSocket(
