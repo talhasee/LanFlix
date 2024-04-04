@@ -50,6 +50,8 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
 
   String videoUrl = "";
 
+  final TextEditingController _urlController = TextEditingController();
+
   VideoPlayerController? _videoPlayerController;
   ChewieController? _chewieController;
 
@@ -219,8 +221,8 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     );
   }
 
-  void startInit() {
-    String serverURL = 'http://$host_ip_address:8080/video/stream';
+  void startInit(String serverURL) {
+    // String serverURL = 'http://$host_ip_address:8080/video/stream';
     _videoPlayerController =
         VideoPlayerController.networkUrl(Uri.parse(serverURL));
     _chewieController = ChewieController(
@@ -452,15 +454,34 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
             //   ),
             // )
             //
+            Padding(
+              padding: const EdgeInsets.all(
+                  20.0),
+              child: TextField(
+                controller: _urlController,
+                decoration: const InputDecoration(
+                  labelText: 'Enter HLS Stream URL',
+                ),
+              ),  
+            ),
             ElevatedButton(
               onPressed: () {
-                startInit(); // Initialize controllers when button is clicked
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => Chewie(controller: _chewieController!),
-                  ),
-                );
+                String url = _urlController.text;
+                if (url.isNotEmpty) {
+                  startInit(url); // Initialize controllers when button is clicked
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          Chewie(controller: _chewieController!),
+                    ),
+                  );
+                } else {
+                   // Optionally, show a message if the URL field is empty
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please enter a URL')),
+                    );
+                }
               },
               child: const Text('Play HLS Stream'),
             ),

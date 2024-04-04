@@ -161,34 +161,31 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   Future<bool> discover() async {
     return await _flutterP2pConnectionPlugin.discover();
   }
-
   Future<shelf.Response> _handleRequest(shelf.Request request) async {
     logger.d("INSIDE HANDLER REQUEST ${request.url.path}");
+
     if (request.url.path == 'video/stream') {
       // Assuming videoFilePath is the path to the selected video file
       String videoFilePath = videoPath;
+
       logger.d("Video File path - $videoFilePath");
 
       // Get the directory of the video file
       String videoDirectory = p.dirname(videoFilePath);
-      String outputDirectory = p.join(videoDirectory,
-          'hls_output'); // Output directory within the video directory
+      String outputDirectory =
+          p.join(videoDirectory, 'hls_output'); // Output directory within the video directory
+
       Directory(outputDirectory).createSync(
           recursive: true); // Create the output directory if it doesn't exist
 
       // Generate HLS content using flutter_ffmpeg
       var ffmpeg = FlutterFFmpeg();
+
       try {
-        //   await ffmpeg.execute(
-        //   '-i $videoFilePath -c:v libx264 -g 32 -sc_threshold 0 '
-        //   '-b:v 2500k -b:a 128k -ac 2 -ar 44100 -f hls -hls_time 10 -hls_list_size 0 '
-        //   '-hls_segment_filename $outputDirectory/%03d.ts $outputDirectory/index.m3u8',
-        // ); 
+        // Use a faster preset and higher bitrate for better performance
         await ffmpeg.execute(
-    '-i $videoFilePath -c:v libx264 -b:v 1000k -r 30 -vf scale=1280:-1 -preset slow -f hls -hls_time 10 -hls_list_size 0 -hls_segment_filename $outputDirectory/%03d.ts $outputDirectory/index.m3u8',
-  );
-
-
+          '-i $videoFilePath -c:v libx264 -preset veryfast -b:v 2500k -r 30 -vf scale=1280:-1 -f hls -hls_time 6 -hls_list_size 10 -hls_segment_filename $outputDirectory/%03d.ts $outputDirectory/index.m3u8',
+        );
       } catch (e) {
         logger.d("Error in ffmpeg - $e");
         return shelf.Response.internalServerError(
@@ -203,6 +200,48 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       return shelf.Response.notFound('Not Found');
     }
   }
+
+  // Future<shelf.Response> _handleRequest(shelf.Request request) async {
+  //   logger.d("INSIDE HANDLER REQUEST ${request.url.path}");
+  //   if (request.url.path == 'video/stream') {
+  //     // Assuming videoFilePath is the path to the selected video file
+  //     String videoFilePath = videoPath;
+  //     logger.d("Video File path - $videoFilePath");
+
+  //     // Get the directory of the video file
+  //     String videoDirectory = p.dirname(videoFilePath);
+  //     String outputDirectory = p.join(videoDirectory,
+  //         'hls_output'); // Output directory within the video directory
+  //     Directory(outputDirectory).createSync(
+  //         recursive: true); // Create the output directory if it doesn't exist
+
+  //     // Generate HLS content using flutter_ffmpeg
+  //     var ffmpeg = FlutterFFmpeg();
+  //     try {
+  //       //   await ffmpeg.execute(
+  //       //   '-i $videoFilePath -c:v libx264 -g 32 -sc_threshold 0 '
+  //       //   '-b:v 2500k -b:a 128k -ac 2 -ar 44100 -f hls -hls_time 10 -hls_list_size 0 '
+  //       //   '-hls_segment_filename $outputDirectory/%03d.ts $outputDirectory/index.m3u8',
+  //       // ); 
+  //       await ffmpeg.execute(
+  //   '-i $videoFilePath -c:v libx264 -b:v 1000k -r 30 -vf scale=1280:-1 -preset slow -f hls -hls_time 10 -hls_list_size 0 -hls_segment_filename $outputDirectory/%03d.ts $outputDirectory/index.m3u8',
+  // );
+
+
+  //     } catch (e) {
+  //       logger.d("Error in ffmpeg - $e");
+  //       return shelf.Response.internalServerError(
+  //           body: 'Error processing video');
+  //     }
+
+  //     // Serve the HLS files from the output directory
+  //     var file = File(p.join(outputDirectory, 'index.m3u8'));
+  //     return shelf.Response.ok(await file.readAsString(),
+  //         headers: {'Content-Type': 'application/vnd.apple.mpegurl'});
+  //   } else {
+  //     return shelf.Response.notFound('Not Found');
+  //   }
+  // }
 
   void createShelfHandler() async {
     var handler = const shelf.Pipeline()

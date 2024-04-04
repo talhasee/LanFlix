@@ -11,6 +11,8 @@ public class VideoEncoder {
             return exitCode == 0;
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
+
+            System.out.println("Error while Encoding"+e.toString());
             return false;
         }
     }
