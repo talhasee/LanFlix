@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/services.dart';
 import 'package:logger/logger.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
@@ -103,8 +104,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   void _init() async {
     await _flutterP2pConnectionPlugin.initialize();
     await _flutterP2pConnectionPlugin.register();
-    _streamWifiInfo =
-        _flutterP2pConnectionPlugin.streamWifiP2PInfo().listen((event) {
+    _streamWifiInfo = _flutterP2pConnectionPlugin.streamWifiP2PInfo().listen((event) {
       setState(() {
         wifiP2PInfo = event;
       });
@@ -161,6 +161,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   Future<bool> discover() async {
     return await _flutterP2pConnectionPlugin.discover();
   }
+
   Future<shelf.Response> _handleRequest(shelf.Request request) async {
     logger.d("INSIDE HANDLER REQUEST ${request.url.path}");
 
@@ -172,11 +173,9 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
 
       // Get the directory of the video file
       String videoDirectory = p.dirname(videoFilePath);
-      String outputDirectory =
-          p.join(videoDirectory, 'hls_output'); // Output directory within the video directory
+      String outputDirectory = p.join(videoDirectory, 'hls_output'); // Output directory within the video directory
 
-      Directory(outputDirectory).createSync(
-          recursive: true); // Create the output directory if it doesn't exist
+      Directory(outputDirectory).createSync(recursive: true); // Create the output directory if it doesn't exist
 
       // Generate HLS content using flutter_ffmpeg
       var ffmpeg = FlutterFFmpeg();
@@ -188,14 +187,12 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         );
       } catch (e) {
         logger.d("Error in ffmpeg - $e");
-        return shelf.Response.internalServerError(
-            body: 'Error processing video');
+        return shelf.Response.internalServerError(body: 'Error processing video');
       }
 
       // Serve the HLS files from the output directory
       var file = File(p.join(outputDirectory, 'index.m3u8'));
-      return shelf.Response.ok(await file.readAsString(),
-          headers: {'Content-Type': 'application/vnd.apple.mpegurl'});
+      return shelf.Response.ok(await file.readAsString(), headers: {'Content-Type': 'application/vnd.apple.mpegurl'});
     } else {
       return shelf.Response.notFound('Not Found');
     }
@@ -222,11 +219,10 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   //       //   '-i $videoFilePath -c:v libx264 -g 32 -sc_threshold 0 '
   //       //   '-b:v 2500k -b:a 128k -ac 2 -ar 44100 -f hls -hls_time 10 -hls_list_size 0 '
   //       //   '-hls_segment_filename $outputDirectory/%03d.ts $outputDirectory/index.m3u8',
-  //       // ); 
+  //       // );
   //       await ffmpeg.execute(
   //   '-i $videoFilePath -c:v libx264 -b:v 1000k -r 30 -vf scale=1280:-1 -preset slow -f hls -hls_time 10 -hls_list_size 0 -hls_segment_filename $outputDirectory/%03d.ts $outputDirectory/index.m3u8',
   // );
-
 
   //     } catch (e) {
   //       logger.d("Error in ffmpeg - $e");
@@ -244,9 +240,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   // }
 
   void createShelfHandler() async {
-    var handler = const shelf.Pipeline()
-        .addMiddleware(shelf.logRequests())
-        .addHandler(_handleRequest);
+    var handler = const shelf.Pipeline().addMiddleware(shelf.logRequests()).addHandler(_handleRequest);
 
     // logger.d("${InternetAddress.anyIPv4}");
 
@@ -337,8 +331,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         },
         transferUpdate: (transfer) {
           if (transfer.completed) {
-            snack(
-                "${transfer.failed ? "failed to ${transfer.receiving ? "receive" : "send"}" : transfer.receiving ? "received" : "sent"}: ${transfer.filename}");
+            snack("${transfer.failed ? "failed to ${transfer.receiving ? "receive" : "send"}" : transfer.receiving ? "received" : "sent"}: ${transfer.filename}");
           }
           print(
               "ID: ${transfer.id}, FILENAME: ${transfer.filename}, PATH: ${transfer.path}, COUNT: ${transfer.count}, TOTAL: ${transfer.total}, COMPLETED: ${transfer.completed}, FAILED: ${transfer.failed}, RECEIVING: ${transfer.receiving}");
@@ -364,8 +357,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         transferUpdate: (transfer) {
           // if (transfer.count == 0) transfer.cancelToken?.cancel();
           if (transfer.completed) {
-            snack(
-                "${transfer.failed ? "failed to ${transfer.receiving ? "receive" : "send"}" : transfer.receiving ? "received" : "sent"}: ${transfer.filename}");
+            snack("${transfer.failed ? "failed to ${transfer.receiving ? "receive" : "send"}" : transfer.receiving ? "received" : "sent"}: ${transfer.filename}");
           }
           print(
               "ID: ${transfer.id}, FILENAME: ${transfer.filename}, PATH: ${transfer.path}, COUNT: ${transfer.count}, TOTAL: ${transfer.total}, COMPLETED: ${transfer.completed}, FAILED: ${transfer.failed}, RECEIVING: ${transfer.receiving}");
@@ -387,7 +379,6 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       ),
     );
   }
-
 
   Future sendMessage() async {
     _flutterP2pConnectionPlugin.sendStringToSocket(msgText.text);
@@ -417,8 +408,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     }
     snack("File Name: ${file.name}");
     // if (filePath == null) return;
-    List<TransferUpdate>? updates =
-        await _flutterP2pConnectionPlugin.sendFiletoSocket(
+    List<TransferUpdate>? updates = await _flutterP2pConnectionPlugin.sendFiletoSocket(
       [
         (file.path).toString(),
         // "/storage/emulated/0/Download/Likee_7100105253123033459.mp4",
@@ -446,6 +436,16 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     printer: PrettyPrinter(),
   );
 
+  static const platform = MethodChannel('http.server');
+
+  Future<void> _startSerer(String filePath) async {
+    try {
+      await platform.invokeMethod('startVideoStream', {'videoPath': filePath, 'port': 8080});
+    } on PlatformException catch (e) {
+      logger.e(e);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -472,26 +472,20 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                           'Fetching group owner address...',
                           style: TextStyle(fontSize: 24),
                         ),
-                        SizedBox(
-                            height:
-                                20), // Add some space between text and loading animation
+                        SizedBox(height: 20), // Add some space between text and loading animation
                         CircularProgressIndicator(),
                       ],
                     );
-                  } else if (snapshot.hasError ||
-                      snapshot.data == null ||
-                      snapshot.data == "null") {
+                  } else if (snapshot.hasError || snapshot.data == null || snapshot.data == "null") {
                     // If snapshot has error or data is null, show alert and restart the app
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       showDialog(
                         context: context,
-                        barrierDismissible:
-                            false, // Prevent dismissing dialog by tapping outside
+                        barrierDismissible: false, // Prevent dismissing dialog by tapping outside
                         builder: (BuildContext context) {
                           return AlertDialog(
                             title: const Text('Error'),
-                            content: const Text(
-                                'Please restart your WiFi and open the app again.'),
+                            content: const Text('Please restart your WiFi and open the app again.'),
                             actions: <Widget>[
                               TextButton(
                                 onPressed: () {
@@ -526,23 +520,19 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
               ),
               ElevatedButton(
                   onPressed: () async {
-                    FilePickerResult? result =
-                        await FilePicker.platform.pickFiles();
+                    FilePickerResult? result = await FilePicker.platform.pickFiles();
                     if (result != null) {
                       PlatformFile file = result.files.first;
                       print("File Name: ${file.name}\nFile Path: ${file.path}");
-                      logger.d(
-                          "File Name: ${file.name}\nFile Path: ${file.path}");
-                      snack("File Name: ${file.name}");
-                      snack("File Path: ${file.path}");
+                      logger.d("File Name: ${file.name}\nFile Path: ${file.path}");
+                      // snack("File Name: ${file.name}");
+                      // snack("File Path: ${file.path}");
+                      await _startSerer(file.path.toString());
                     }
                   },
                   child: const Text("File Select")),
-              ElevatedButton(
-                  onPressed: selectVideoFile, child: Text("Select Video File")),
-              ElevatedButton(
-                  onPressed: createShelfHandler,
-                  child: Text("Start Video server")),
+              ElevatedButton(onPressed: selectVideoFile, child: Text("Select Video File")),
+              ElevatedButton(onPressed: createShelfHandler, child: Text("Start Video server")),
             ],
           ),
         ));

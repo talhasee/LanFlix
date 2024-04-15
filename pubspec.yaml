@@ -15,7 +15,6 @@ dependencies:
     sdk: flutter
   flutter_ffmpeg: ^0.4.2
   flutter_p2p_connection: ^2.0.1
-  flutter_webrtc: ^0.9.48+hotfix.1
   logger: ^2.1.0
   permission_handler: ^10.4.5
   restart_app: ^1.2.1
