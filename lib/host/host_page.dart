@@ -439,9 +439,12 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   static const platform = MethodChannel('http.server');
 
   Future<void> _startSerer(String filePath) async {
+      // logger.d("CALLING..........");
     try {
       await platform.invokeMethod('startVideoStream', {'videoPath': filePath, 'port': 8080});
+      // logger.d("Send Path and Port to kt file");
     } on PlatformException catch (e) {
+      logger.d("Error in platform channel");
       logger.e(e);
     }
   }
@@ -523,8 +526,8 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                     FilePickerResult? result = await FilePicker.platform.pickFiles();
                     if (result != null) {
                       PlatformFile file = result.files.first;
-                      print("File Name: ${file.name}\nFile Path: ${file.path}");
-                      logger.d("File Name: ${file.name}\nFile Path: ${file.path}");
+                      // print("File Name: ${file.name}\nFile Path: ${file.path}");
+                      logger.d("File Name: ${file.name}\nFile Path: ${file.path.toString()}");
                       // snack("File Name: ${file.name}");
                       // snack("File Path: ${file.path}");
                       await _startSerer(file.path.toString());

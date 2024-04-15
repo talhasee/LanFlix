@@ -1,25 +1,17 @@
 package com.example.streamer
-
 import androidx.annotation.NonNull
+import android.util.Log
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
-
-import com.sun.net.httpserver.HttpExchange
-import com.sun.net.httpserver.HttpHandler
-import com.sun.net.httpserver.HttpServer
-import java.io.*
+import fi.iki.elonen.NanoHTTPD
+import java.io.File
+import java.io.FileInputStream
 import java.net.InetAddress
-import java.net.InetSocketAddress
-import java.nio.ByteBuffer
-import java.nio.channels.FileChannel
 import java.net.NetworkInterface
-import java.util.concurrent.Executors
-import java.util.logging.Logger
 
-class MainActivity: FlutterActivity() {
+class MainActivity : FlutterActivity() {
     private val CHANNEL = "http.server"
-    private val videoServer = VideoServer
 
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -27,108 +19,77 @@ class MainActivity: FlutterActivity() {
             if (call.method == "startVideoStream") {
                 val videoPath = call.argument<String>("videoPath")
                 val port = call.argument<Int>("port")
-                videoServer.startServer(videoPath, port)
-                // Invoke the Java application here
-                // You might need to use a different approach to run the Java application from Android
-                result.success(null)
+
+                if (videoPath != null && port != null) {
+                    // Log.d("MainActivity", "STARTING SERVER!!!!")
+                    Log.d("MainActivity", "Started video server for $videoPath at $port");
+                    startVideoServer(videoPath, port)
+                    result.success(null)
+                } else {
+                    result.error("invalid_arguments", "Invalid arguments provided", null)
+                }
             } else {
                 result.notImplemented()
             }
         }
     }
-}
 
-object VideoServer {
-
-    private val LOGGER = Logger.getLogger(VideoServer::class.java.name)
-
-    @Throws(IOException::class)
-    fun startServer(videoFilePath: String, port: Int) {
-        // Get the IP address of the machine
-        val ipAddress = getLocalIPAddress() ?: run {
-            println("Failed to find a network interface with a valid IP address.")
-            System.exit(1)
+    private fun startVideoServer(videoFilePath: String, port: Int) {
+        try {
+            val server = VideoServer(videoFilePath, port)
+            val localAddress = server.getLocalIPAddress()
+            server.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false)
+            val actualPort = server.listeningPort
+            Log.d("MainActivity", "Video server started on $localAddress:$actualPort")
+        } catch (e: Exception) {
+            Log.d("MainActivity", "Error starting video server: ${e.message}")
+            e.printStackTrace()
         }
-
-        // Create the server with the IP address and port
-        val server = HttpServer.create(InetSocketAddress(ipAddress, port), 0)
-
-        // Create a thread pool for handling client requests
-        server.executor = Executors.newCachedThreadPool()
-
-        server.createContext("/", HttpHandler { exchange ->
-            handleRequest(videoFilePath, exchange)
-        })
-
-        server.start()
-        LOGGER.info("Server is listening on ${ipAddress.hostAddress}:$port")
     }
 
-    @Throws(IOException::class)
-    private fun handleRequest(videoFilePath: String, exchange: HttpExchange) {
-        val clientAddress = exchange.remoteAddress.address
-        LOGGER.info("Client connected from: ${clientAddress.hostAddress}")
+    private class VideoServer(private val videoFilePath: String, port: Int) : NanoHTTPD(0) {
+        override fun serve(session: IHTTPSession): Response {
+            // val clientAddress = session.remoteAddress.address
+            // Log.d("VideoServer", "New client connected from: $clientAddress")
 
-        val file = File(videoFilePath)
-        if (file.exists() && !file.isDirectory) {
-            exchange.responseHeaders.add("Content-Type", "video/mkv")
-            exchange.sendResponseHeaders(200, file.length())
+            Log.d("VideoServer", "Serving video request")
+            val file = File(videoFilePath)
 
-            exchange.responseBody.use { os ->
-                FileInputStream(file).use { fs ->
-                    FileChannel.open(file.toPath()).use { channel ->
-                        val fileSize = channel.size()
-                        val buffer = ByteArray(64 * 1024) // 64 KB buffer
-                        var bytesRead: Int
-                        while (channel.read(ByteBuffer.wrap(buffer)).also { bytesRead = it } != -1) {
-                            os.write(buffer, 0, bytesRead)
-                        }
+            return if (file.exists() && !file.isDirectory) {
+                val response = newChunkedResponse(
+                    Response.Status.OK,
+                    "video/mp4",
+                    FileInputStream(file)
+                )
+                response.addHeader("Content-Length", file.length().toString())
+                response
+            } else {
+                Log.d("VideoServer", "Video file not found")
+                newFixedLengthResponse(Response.Status.NOT_FOUND, MIME_PLAINTEXT, "File not found.")
+            }
+        }
+
+        fun getLocalIPAddress(): String {
+            return try {
+                val interfaces = NetworkInterface.getNetworkInterfaces()
+                while (interfaces.hasMoreElements()) {
+                    val iface = interfaces.nextElement()
+                    // Filter out 127.0.0.1 and inactive interfaces
+                    if (iface.isLoopback || !iface.isUp) continue
+
+                    val addresses = iface.inetAddresses
+                    while (addresses.hasMoreElements()) {
+                        val addr = addresses.nextElement()
+                        // Filter out IPv6 addresses
+                        if (addr is java.net.Inet4Address) return addr.hostAddress
                     }
                 }
-            }
-        } else {
-            // Respond with 404 Not Found if the file doesn't exist.
-            val response = "File not found."
-            exchange.sendResponseHeaders(404, response.toByteArray().size.toLong())
-            exchange.responseBody.use { os ->
-                os.write(response.toByteArray())
+                "Unknown"
+            } catch (e: Exception) {
+                Log.d("VideoServer", "Error getting local IP address: ${e.message}")
+                e.printStackTrace()
+                "Unknown"
             }
         }
     }
-
-    private fun getLocalIPAddress(): InetAddress? {
-        return try {
-            val interfaces = NetworkInterface.getNetworkInterfaces()
-            while (interfaces.hasMoreElements()) {
-                val iface = interfaces.nextElement()
-                // Filter out 127.0.0.1 and inactive interfaces
-                if (iface.isLoopback || !iface.isUp) continue
-
-                val addresses = iface.inetAddresses
-                while (addresses.hasMoreElements()) {
-                    val addr = addresses.nextElement()
-                    // Filter out IPv6 addresses
-                    if (addr is java.net.Inet4Address) return addr
-                }
-            }
-            null
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-
-    // @JvmStatic
-    // @Throws(IOException::class)
-    // fun main(args: Array<String>) {
-    //     if (args.size < 2) {
-    //         println("Usage: java VideoServer <videoFilePath> <port>")
-    //         System.exit(1)
-    //     }
-
-    //     val videoFilePath = args[0]
-    //     val port = args[1].toInt()
-
-    //     startServer(videoFilePath, port)
-    // }
 }
