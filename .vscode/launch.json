@@ -28,6 +28,12 @@
             "deviceId": "SGWSUCUW7DEURGDU"
         },
         {
+            "name": "Poco",
+            "request": "launch",
+            "type": "dart",
+            "deviceId": "d9e32685"
+        },
+        {
             "name": "Emulator",
             "request": "launch",
             "type": "dart",
@@ -38,7 +44,7 @@
         {
             "name": "All Devices",
             "configurations": [
-                "Redmi", "Oppo",
+                "Redmi", "Poco",
             ],
         }
     ]

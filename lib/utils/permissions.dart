@@ -128,16 +128,10 @@ class Permissions {
 
   Future<bool> checkPermissions() async {
     //checking location permission
-    bool location = await locationPermission() &&
-        (await isLocationEnabled() ? true : await enableLocation());
-    bool wifi = await wifiPermission() &&
-        (await isWifiEnabled() ? true : await enableWifi());
+    bool location = await locationPermission() && (await isLocationEnabled() ? true : await enableLocation());
+    bool wifi = await wifiPermission() && (await isWifiEnabled() ? true : await enableWifi());
     bool storage = await storagePermission();
-    bool nearbyDevices = int.parse(await getAndroidVersion() ?? '0') >= 12
-        ? await enableNearbyDevices()
-        : true;
-    snack(
-        "location $location,wifi $wifi, storage $storage, nearby $nearbyDevices");
-    return location && wifi && storage && nearbyDevices;
+    bool otherPermissions = location && wifi && storage;
+    return int.parse(await getAndroidVersion() ?? '0') >= 12 ? await enableNearbyDevices() && otherPermissions : otherPermissions;
   }
 }

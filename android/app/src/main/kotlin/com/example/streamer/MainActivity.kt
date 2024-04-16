@@ -18,13 +18,11 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "startVideoStream") {
                 val videoPath = call.argument<String>("videoPath")
-                val port = call.argument<Int>("port")
-
-                if (videoPath != null && port != null) {
+                if (videoPath != null) {
                     // Log.d("MainActivity", "STARTING SERVER!!!!")
-                    Log.d("MainActivity", "Started video server for $videoPath at $port");
-                    startVideoServer(videoPath, port)
-                    result.success(null)
+                    Log.d("MainActivity", "Started video server for $videoPath");
+                    val addr = startVideoServer(videoPath)
+                    result.success(addr)
                 } else {
                     result.error("invalid_arguments", "Invalid arguments provided", null)
                 }
@@ -34,24 +32,23 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun startVideoServer(videoFilePath: String, port: Int) {
-        try {
-            val server = VideoServer(videoFilePath, port)
-            val localAddress = server.getLocalIPAddress()
+    private fun startVideoServer(videoFilePath: String) : String {
+        return try {
+            val server = VideoServer(videoFilePath)
             server.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false)
-            val actualPort = server.listeningPort
-            Log.d("MainActivity", "Video server started on $localAddress:$actualPort")
+            val localAddress = server.getLocalIPAddress()
+            val port = server.listeningPort
+            Log.d("MainActivity", "Video server started on $localAddress:$port")
+            "$localAddress:$port"
         } catch (e: Exception) {
             Log.d("MainActivity", "Error starting video server: ${e.message}")
             e.printStackTrace()
+            "0:0"
         }
     }
 
-    private class VideoServer(private val videoFilePath: String, port: Int) : NanoHTTPD(0) {
+    private class VideoServer(private val videoFilePath: String) : NanoHTTPD(0) {
         override fun serve(session: IHTTPSession): Response {
-            // val clientAddress = session.remoteAddress.address
-            // Log.d("VideoServer", "New client connected from: $clientAddress")
-
             Log.d("VideoServer", "Serving video request")
             val file = File(videoFilePath)
 
