@@ -70,6 +70,8 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _streamWifiInfo?.cancel();
+    _streamPeers?.cancel();
     closeServer();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -92,6 +94,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     await _flutterP2pConnectionPlugin.register();
     _streamWifiInfo = _flutterP2pConnectionPlugin.streamWifiP2PInfo().listen((event) {
       setState(() {
+        // logger.d("Setting state of wifip2pinfo");
         wifiP2PInfo = event;
       });
     });
@@ -108,6 +111,9 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     bool hasPermission = await permissions.checkPermissions();
     if (!hasPermission) {
       snack("Don't have the required permissions to run the app.");
+    }
+    if (wifiP2PInfo == null) {
+      logger.d("yes its null");
     }
     p2p_util_obj = p2p_utils(
         p2pObj: _flutterP2pConnectionPlugin,
@@ -144,6 +150,11 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       //start socket so that whenever client comes no need to connect it manually
       // bool? discovering = await discover();
       // snack("discovering $discovering");
+      if (wifiP2PInfo == null) {
+        logger.d("Inside wifip2pinfo is null");
+      }
+      p2p_util_obj.wifiP2PInfo = wifiP2PInfo;
+      logger.d("Group created!!");
       p2p_util_obj.discover();
       p2p_util_obj.startSocket();
     }

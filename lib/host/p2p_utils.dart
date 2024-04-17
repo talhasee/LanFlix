@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:logger/logger.dart';
 import 'package:streamer/utils/permissions.dart';
 import 'package:flutter_p2p_connection/flutter_p2p_connection.dart';
 
@@ -6,7 +7,7 @@ class p2p_utils {
   final FlutterP2pConnection p2pObj;
   final BuildContext context;
   final Permissions permissions;
-  final WifiP2PInfo? wifiP2PInfo;
+  WifiP2PInfo? wifiP2PInfo;
 
   p2p_utils({required this.p2pObj, required this.context, required this.permissions, required this.wifiP2PInfo});
 
@@ -24,6 +25,10 @@ class p2p_utils {
   Future<bool> discover() async {
     return await p2pObj.discover();
   }
+
+  var logger = Logger(
+    printer: PrettyPrinter(),
+  );
 
   Future<bool> createGroup() async {
     bool enabledLocation = await permissions.isLocationEnabled();
@@ -63,13 +68,16 @@ class p2p_utils {
   }
 
   Future<void> startSocket() async {
+    if (wifiP2PInfo == null) logger.d("wifip2p is null");
     if (wifiP2PInfo != null) {
+      logger.d("Starting socket.....");
       bool started = await p2pObj.startSocket(
         groupOwnerAddress: wifiP2PInfo!.groupOwnerAddress,
         downloadPath: "/storage/emulated/0/Download/",
         maxConcurrentDownloads: 2,
         deleteOnError: true,
         onConnect: (name, address) {
+          logger.d("$name connected to socket with address: $address");
           snack("$name connected to socket with address: $address");
         },
         transferUpdate: (transfer) {

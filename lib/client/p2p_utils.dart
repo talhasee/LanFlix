@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:logger/logger.dart';
 import 'package:streamer/client/video_utils.dart';
 import 'package:streamer/utils/permissions.dart';
 import 'package:flutter_p2p_connection/flutter_p2p_connection.dart';
@@ -7,7 +8,7 @@ class p2p_utils {
   final FlutterP2pConnection p2pObj;
   final BuildContext context;
   final Permissions permissions;
-  final WifiP2PInfo? wifiP2PInfo;
+  WifiP2PInfo? wifiP2PInfo;
   video_utils player;
   String hostIpAddress = "";
 
@@ -24,16 +25,23 @@ class p2p_utils {
     );
   }
 
+  var logger = Logger(
+    printer: PrettyPrinter(),
+  );
+
   Future<bool> discover() async {
     return await p2pObj.discover();
   }
 
-  Future<bool?> connectToHost(String deviceAddress) async {
+  Future<void> connectToHost(String deviceAddress) async {
+
     bool? isConnected = await p2pObj.connect(deviceAddress);
-    if (isConnected != null && isConnected) {
-      connectToSocket();
-    }
+
+    logger.d("Connecting to host via a socket");
+
   }
+
+  // Future<void> connectToSocket(String )
 
   Future<void> startSocket() async {
     if (wifiP2PInfo != null) {
@@ -60,34 +68,40 @@ class p2p_utils {
     }
   }
 
-  Future<void> connectToSocket() async {
-    if (wifiP2PInfo != null) {
-      await p2pObj.connectToSocket(
-        groupOwnerAddress: wifiP2PInfo!.groupOwnerAddress,
-        downloadPath: "/storage/emulated/0/Download/",
-        maxConcurrentDownloads: 3,
-        deleteOnError: true,
-        onConnect: (address) {
-          snack("connected to socket: $address");
-        },
-        transferUpdate: (transfer) {
-          // if (transfer.count == 0) transfer.cancelToken?.cancel();
-          if (transfer.completed) {
-            snack("${transfer.failed ? "failed to ${transfer.receiving ? "receive" : "send"}" : transfer.receiving ? "received" : "sent"}: ${transfer.filename}");
-          }
-          print(
-              "ID: ${transfer.id}, FILENAME: ${transfer.filename}, PATH: ${transfer.path}, COUNT: ${transfer.count}, TOTAL: ${transfer.total}, COMPLETED: ${transfer.completed}, FAILED: ${transfer.failed}, RECEIVING: ${transfer.receiving}");
-        },
-        receiveString: (req) async {
-          snack(req);
-          String mssg = req;
-          if (mssg.startsWith("&HOST_ADDR")) {
-            hostIpAddress = mssg.substring(10);
-            player.startInit("http://$hostIpAddress/");
-          }
-        },
-      );
+  Future<void> connectToSocket(String? groupOwnerAddress) async {
+    if (wifiP2PInfo == null) {
+      logger.d("wifip2pinfo is null in util");
     }
+    // if (wifiP2PInfo != null) {
+    await p2pObj.connectToSocket(
+      // groupOwnerAddress: wifiP2PInfo!.groupOwnerAddress,
+      groupOwnerAddress: groupOwnerAddress!,
+      downloadPath: "/storage/emulated/0/Download/",
+      maxConcurrentDownloads: 3,
+      deleteOnError: true,
+      onConnect: (address) {
+        logger.d("connected to socket: $address");
+        snack("connected to socket: $address");
+      },
+      transferUpdate: (transfer) {
+        // if (transfer.count == 0) transfer.cancelToken?.cancel();
+        if (transfer.completed) {
+          snack("${transfer.failed ? "failed to ${transfer.receiving ? "receive" : "send"}" : transfer.receiving ? "received" : "sent"}: ${transfer.filename}");
+        }
+        print(
+            "ID: ${transfer.id}, FILENAME: ${transfer.filename}, PATH: ${transfer.path}, COUNT: ${transfer.count}, TOTAL: ${transfer.total}, COMPLETED: ${transfer.completed}, FAILED: ${transfer.failed}, RECEIVING: ${transfer.receiving}");
+      },
+      receiveString: (req) async {
+        snack(req);
+        String mssg = req;
+        if (mssg.startsWith("&HOST_ADDR")) {
+          hostIpAddress = mssg.substring(10);
+          logger.d("MESSAGE - $hostIpAddress");
+          player.startInit("http://$hostIpAddress/");
+        }
+      },
+    );
+    // }
   }
 
   Future<void> closeSocketConnection() async {

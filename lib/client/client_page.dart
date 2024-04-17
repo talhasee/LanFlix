@@ -85,6 +85,12 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     _streamWifiInfo = _flutterP2pConnectionPlugin.streamWifiP2PInfo().listen((event) {
       setState(() {
         wifiP2PInfo = event;
+        //  if (p2p_util_obj.wifiP2PInfo == null) {
+        // logger.d("SETSTATE util's wifip2pinfo is null");
+        // logger.d("SETSTATE main groupowner addr - ${wifiP2PInfo?.groupOwnerAddress}");
+        p2p_util_obj.wifiP2PInfo = wifiP2PInfo;
+        // logger.d("SETSTATE util's groupowner addr - ${p2p_util_obj.wifiP2PInfo?.groupOwnerAddress}");
+        // }
       });
     });
     _streamPeers = _flutterP2pConnectionPlugin.streamPeers().listen((event) {
@@ -194,8 +200,18 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                               TextButton(
                                 onPressed: () async {
                                   Navigator.of(context).pop();
-                                  bool? bo = await _flutterP2pConnectionPlugin.connect(peers[index].deviceAddress);
-                                  snack("connected: $bo");
+                                  // await _flutterP2pConnectionPlugin.connect(peers[index].deviceAddress);
+
+                                  await p2p_util_obj.connectToHost(peers[index].deviceAddress);
+
+                                  await Future.delayed(const Duration(seconds: 2));
+
+                                  p2p_util_obj.wifiP2PInfo = wifiP2PInfo;
+
+                                  
+
+                                  p2p_util_obj.connectToSocket(wifiP2PInfo?.groupOwnerAddress);
+                                  // snack("connected: $bo");
                                 },
                                 child: const Text("connect"),
                               ),
@@ -262,13 +278,13 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
               child: const Text("get group info"),
             ),
             // Call internally
-            // ElevatedButton(
-            //   onPressed: () async {
-            //     bool? discovering = await _flutterP2pConnectionPlugin.discover();
-            //     snack("discovering $discovering");
-            //   },
-            //   child: const Text("discover"),
-            // ),
+            ElevatedButton(
+              onPressed: () async {
+                p2p_util_obj.discover();
+                // snack("discovering $discovering");
+              },
+              child: const Text("discover"),
+            ),
             // Call internally to get host ip:port
             // ElevatedButton(
             //   onPressed: () async {

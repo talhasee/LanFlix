@@ -1,16 +1,23 @@
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
+import 'package:logger/logger.dart';
 import 'package:video_player/video_player.dart';
 
 class video_utils {
-  late VideoPlayerController videoPlayerController;
+  VideoPlayerController? videoPlayerController;
   late ChewieController chewieController;
   final BuildContext context;
 
   video_utils({required this.context});
 
+   var logger = Logger(
+    printer: PrettyPrinter(),
+  );
+
+
   void dispose() {
-    videoPlayerController.dispose();
+    logger.d("DISPOSED PLAYER");
+    videoPlayerController?.dispose();
     chewieController.dispose();
   }
 
@@ -18,7 +25,7 @@ class video_utils {
     // String serverURL = 'http://$host_ip_address:8080/video/stream';
     videoPlayerController = VideoPlayerController.networkUrl(Uri.parse(serverURL));
     chewieController = ChewieController(
-      videoPlayerController: videoPlayerController,
+      videoPlayerController: videoPlayerController!,
       aspectRatio: 16 / 9,
       autoPlay: true,
     );
