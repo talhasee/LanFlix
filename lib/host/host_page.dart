@@ -8,7 +8,7 @@ import 'dart:async';
 import 'package:restart_app/restart_app.dart';
 import 'package:flutter_p2p_connection/flutter_p2p_connection.dart';
 import 'package:streamer/host/p2p_utils.dart';
-import '../utils/permissions.dart';
+import 'package:streamer/utils/permissions.dart';
 
 void main() {
   runApp(const HostPage());
@@ -200,6 +200,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       setState(() {
         serverAddress = addr;
       });
+      sendDataAsMessage("&HOST_ADDR$serverAddress");
     } on PlatformException catch (e) {
       logger.d("Error in platform channel");
       logger.e(e);

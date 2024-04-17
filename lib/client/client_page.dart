@@ -1,12 +1,12 @@
-import 'dart:io';
 import 'package:chewie/chewie.dart';
-import 'package:filesystem_picker/filesystem_picker.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter_p2p_connection/flutter_p2p_connection.dart';
 import 'package:logger/logger.dart';
+import 'package:streamer/client/video_utils.dart';
 import 'package:streamer/utils/permissions.dart';
 import 'package:video_player/video_player.dart';
+import 'package:streamer/client/p2p_utils.dart';
 
 void main() {
   runApp(const ClientPage());
@@ -41,19 +41,19 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   final TextEditingController msgText = TextEditingController();
   final _flutterP2pConnectionPlugin = FlutterP2pConnection();
   late final Permissions permissions;
+  late final p2p_utils p2p_util_obj;
   List<DiscoveredPeers> peers = [];
   WifiP2PInfo? wifiP2PInfo;
   StreamSubscription<WifiP2PInfo>? _streamWifiInfo;
   StreamSubscription<List<DiscoveredPeers>>? _streamPeers;
 
-  String host_ip_address = "";
+  // String host_ip_address = "";
 
   String videoUrl = "";
 
   final TextEditingController _urlController = TextEditingController();
 
-  VideoPlayerController? _videoPlayerController;
-  ChewieController? _chewieController;
+  late video_utils player;
 
   @override
   void initState() {
@@ -64,8 +64,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
 
   @override
   void dispose() {
-    _videoPlayerController?.dispose();
-    _chewieController?.dispose();
+    player.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _flutterP2pConnectionPlugin.unregister();
     super.dispose();
@@ -83,8 +82,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   void _init() async {
     await _flutterP2pConnectionPlugin.initialize();
     await _flutterP2pConnectionPlugin.register();
-    _streamWifiInfo =
-        _flutterP2pConnectionPlugin.streamWifiP2PInfo().listen((event) {
+    _streamWifiInfo = _flutterP2pConnectionPlugin.streamWifiP2PInfo().listen((event) {
       setState(() {
         wifiP2PInfo = event;
       });
@@ -94,11 +92,23 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         peers = event;
       });
     });
+    player = video_utils(
+        // ignore: use_build_context_synchronously
+        context: context);
     permissions = Permissions(
         p2pObj: _flutterP2pConnectionPlugin,
         // ignore: use_build_context_synchronously
         context: context);
     permissions.checkPermissions();
+    // to discover hosts
+    p2p_util_obj = p2p_utils(
+        p2pObj: _flutterP2pConnectionPlugin,
+        // ignore: use_build_context_synchronously
+        context: context,
+        permissions: permissions,
+        wifiP2PInfo: wifiP2PInfo,
+        player: player);
+    p2p_util_obj.discover();
   }
 
   //Get Clients
@@ -115,101 +125,6 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     }
   }
 
-  Future startSocket() async {
-    if (wifiP2PInfo != null) {
-      bool started = await _flutterP2pConnectionPlugin.startSocket(
-        groupOwnerAddress: wifiP2PInfo!.groupOwnerAddress,
-        downloadPath: "/storage/emulated/0/Download/",
-        maxConcurrentDownloads: 2,
-        deleteOnError: true,
-        onConnect: (name, address) {
-          snack("$name connected to socket with address: $address");
-        },
-        transferUpdate: (transfer) {
-          if (transfer.completed) {
-            snack(
-                "${transfer.failed ? "failed to ${transfer.receiving ? "receive" : "send"}" : transfer.receiving ? "received" : "sent"}: ${transfer.filename}");
-          }
-          print(
-              "ID: ${transfer.id}, FILENAME: ${transfer.filename}, PATH: ${transfer.path}, COUNT: ${transfer.count}, TOTAL: ${transfer.total}, COMPLETED: ${transfer.completed}, FAILED: ${transfer.failed}, RECEIVING: ${transfer.receiving}");
-        },
-        receiveString: (req) async {
-          snack(req);
-        },
-      );
-      snack("open socket: $started");
-    }
-  }
-
-  Future connectToSocket() async {
-    if (wifiP2PInfo != null) {
-      await _flutterP2pConnectionPlugin.connectToSocket(
-        groupOwnerAddress: wifiP2PInfo!.groupOwnerAddress,
-        downloadPath: "/storage/emulated/0/Download/",
-        maxConcurrentDownloads: 3,
-        deleteOnError: true,
-        onConnect: (address) {
-          snack("connected to socket: $address");
-        },
-        transferUpdate: (transfer) {
-          // if (transfer.count == 0) transfer.cancelToken?.cancel();
-          if (transfer.completed) {
-            snack(
-                "${transfer.failed ? "failed to ${transfer.receiving ? "receive" : "send"}" : transfer.receiving ? "received" : "sent"}: ${transfer.filename}");
-          }
-          print(
-              "ID: ${transfer.id}, FILENAME: ${transfer.filename}, PATH: ${transfer.path}, COUNT: ${transfer.count}, TOTAL: ${transfer.total}, COMPLETED: ${transfer.completed}, FAILED: ${transfer.failed}, RECEIVING: ${transfer.receiving}");
-        },
-        receiveString: (req) async {
-          snack(req);
-          String mssg = req;
-          if (mssg.startsWith("&HOST_IP")) {
-            host_ip_address = mssg.substring(8);
-          }
-        },
-      );
-    }
-  }
-
-  Future closeSocketConnection() async {
-    bool closed = _flutterP2pConnectionPlugin.closeSocket();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          "closed: $closed",
-        ),
-      ),
-    );
-  }
-
-  Future sendMessage() async {
-    _flutterP2pConnectionPlugin.sendStringToSocket(msgText.text);
-  }
-
-  Future sendFile(bool phone) async {
-    String? filePath = await FilesystemPicker.open(
-      context: context,
-      rootDirectory: Directory(phone ? "/storage/emulated/0/" : "/storage/"),
-      fsType: FilesystemType.file,
-      fileTileSelectMode: FileTileSelectMode.wholeTile,
-      showGoUp: true,
-      folderIconColor: Colors.blue,
-    );
-    if (filePath == null) return;
-    List<TransferUpdate>? updates =
-        await _flutterP2pConnectionPlugin.sendFiletoSocket(
-      [
-        filePath,
-        // "/storage/emulated/0/Download/Likee_7100105253123033459.mp4",
-        // "/storage/0E64-4628/Download/Adele-Set-Fire-To-The-Rain-via-Naijafinix.com_.mp3",
-        // "/storage/0E64-4628/Flutter SDK/p2p_plugin.apk",
-        // "/storage/emulated/0/Download/03 Omah Lay - Godly (NetNaija.com).mp3",
-        // "/storage/0E64-4628/Download/Adele-Set-Fire-To-The-Rain-via-Naijafinix.com_.mp3",
-      ],
-    );
-    print(updates);
-  }
-
   void snack(String msg) async {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -218,17 +133,6 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
           msg,
         ),
       ),
-    );
-  }
-
-  void startInit(String serverURL) {
-    // String serverURL = 'http://$host_ip_address:8080/video/stream';
-    _videoPlayerController =
-        VideoPlayerController.networkUrl(Uri.parse(serverURL));
-    _chewieController = ChewieController(
-      videoPlayerController: _videoPlayerController!,
-      aspectRatio: 16 / 9,
-      autoPlay: true,
     );
   }
 
@@ -250,8 +154,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text(
-                "Connected to Host IP: ${wifiP2PInfo == null ? "null" : wifiP2PInfo?.groupOwnerAddress}"),
+            Text("Connected to Host IP: ${wifiP2PInfo == null ? "null" : wifiP2PInfo?.groupOwnerAddress}"),
             wifiP2PInfo != null
                 ? Text(
                     "connected: ${wifiP2PInfo?.isConnected}, isGroupOwner: ${wifiP2PInfo?.isGroupOwner}, groupFormed: ${wifiP2PInfo?.groupFormed}, groupOwnerAddress: ${wifiP2PInfo?.groupOwnerAddress}, clients: ${wifiP2PInfo?.clients}")
@@ -262,7 +165,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
               height: 100,
               width: MediaQuery.of(context).size.width,
               child: ListView.builder(
-                scrollDirection: Axis.horizontal,
+                scrollDirection: Axis.vertical,
                 itemCount: peers.length,
                 itemBuilder: (context, index) => Center(
                   child: GestureDetector(
@@ -278,16 +181,11 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text("name: ${peers[index].deviceName}"),
-                                  Text(
-                                      "address: ${peers[index].deviceAddress}"),
-                                  Text(
-                                      "isGroupOwner: ${peers[index].isGroupOwner}"),
-                                  Text(
-                                      "isServiceDiscoveryCapable: ${peers[index].isServiceDiscoveryCapable}"),
-                                  Text(
-                                      "primaryDeviceType: ${peers[index].primaryDeviceType}"),
-                                  Text(
-                                      "secondaryDeviceType: ${peers[index].secondaryDeviceType}"),
+                                  Text("address: ${peers[index].deviceAddress}"),
+                                  Text("isGroupOwner: ${peers[index].isGroupOwner}"),
+                                  Text("isServiceDiscoveryCapable: ${peers[index].isServiceDiscoveryCapable}"),
+                                  Text("primaryDeviceType: ${peers[index].primaryDeviceType}"),
+                                  Text("secondaryDeviceType: ${peers[index].secondaryDeviceType}"),
                                   Text("status: ${peers[index].status}"),
                                 ],
                               ),
@@ -296,8 +194,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                               TextButton(
                                 onPressed: () async {
                                   Navigator.of(context).pop();
-                                  bool? bo = await _flutterP2pConnectionPlugin
-                                      .connect(peers[index].deviceAddress);
+                                  bool? bo = await _flutterP2pConnectionPlugin.connect(peers[index].deviceAddress);
                                   snack("connected: $bo");
                                 },
                                 child: const Text("connect"),
@@ -316,12 +213,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                       ),
                       child: Center(
                         child: Text(
-                          peers[index]
-                              .deviceName
-                              .toString()
-                              .characters
-                              .first
-                              .toUpperCase(),
+                          peers[index].deviceName.toString().characters.first.toUpperCase(),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 30,
@@ -355,8 +247,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                  "groupNetworkName: ${info?.groupNetworkName}"),
+                              Text("groupNetworkName: ${info?.groupNetworkName}"),
                               Text("passPhrase: ${info?.passPhrase}"),
                               Text("isGroupOwner: ${info?.isGroupOwner}"),
                               Text("clients: ${info?.clients}"),
@@ -370,117 +261,41 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
               },
               child: const Text("get group info"),
             ),
-            ElevatedButton(
-              onPressed: () async {
-                String? ip = await _flutterP2pConnectionPlugin.getIPAddress();
-                snack("ip: $ip");
-              },
-              child: const Text("get ip"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                bool? discovering =
-                    await _flutterP2pConnectionPlugin.discover();
-                snack("discovering $discovering");
-              },
-              child: const Text("discover"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                bool? stopped =
-                    await _flutterP2pConnectionPlugin.stopDiscovery();
-                snack("stopped discovering $stopped");
-              },
-              child: const Text("stop discovery"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                connectToSocket();
-              },
-              child: const Text("connect to socket"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                closeSocketConnection();
-              },
-              child: const Text("close socket"),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(
-                  20.0), // Adjust the padding values as needed
-              child: TextField(
-                controller: msgText,
-                decoration: const InputDecoration(
-                  hintText: "Message",
-                ),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                sendMessage();
-              },
-              child: const Text("send msg"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                sendFile(true);
-              },
-              child: const Text("send File from phone"),
-            ),
+            // Call internally
             // ElevatedButton(
-            //   onPressed: () {
-            //     // Play HLS stream on button press
-            //     try {
-            //       startInit();
-            //       // VideoPlayerController controller =
-            //       //     VideoPlayerController.networkUrl(Uri.parse(serverURL));
-
-            //       // // Initialize and play the video
-            //       // controller.initialize().then((_) {
-            //       //   controller.play();
-            //       //   Navigator.push(
-            //       //     context,
-            //       //     MaterialPageRoute(
-            //       //       builder: (context) => VideoPlayer(controller),
-            //       //     ),
-            //       //   );
-            //       // });
-            //     } catch (e) {
-            //       logger.d("Error in playback - $e");
-            //     }
+            //   onPressed: () async {
+            //     bool? discovering = await _flutterP2pConnectionPlugin.discover();
+            //     snack("discovering $discovering");
             //   },
-            //   child: Chewie(
-            //     controller: _chewieController,
-            //   ),
-            // )
-            //
+            //   child: const Text("discover"),
+            // ),
+            // Call internally to get host ip:port
+            // ElevatedButton(
+            //   onPressed: () async {
+            //     p2p_util_obj.connectToSocket();
+            //   },
+            //   child: const Text("connect to socket"),
+            // ),
+            // Play stream when gets host's ip:port from socket
             Padding(
-              padding: const EdgeInsets.all(
-                  20.0),
+              padding: const EdgeInsets.all(20.0),
               child: TextField(
                 controller: _urlController,
                 decoration: const InputDecoration(
                   labelText: 'Enter HLS Stream URL',
                 ),
-              ),  
+              ),
             ),
             ElevatedButton(
               onPressed: () {
                 String url = _urlController.text;
                 if (url.isNotEmpty) {
-                  startInit(url); // Initialize controllers when button is clicked
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          Chewie(controller: _chewieController!),
-                    ),
-                  );
+                  player.startInit(url);
                 } else {
-                   // Optionally, show a message if the URL field is empty
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please enter a URL')),
-                    );
+                  // Optionally, show a message if the URL field is empty
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter a URL')),
+                  );
                 }
               },
               child: const Text('Play HLS Stream'),
