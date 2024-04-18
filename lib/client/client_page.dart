@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
@@ -46,8 +48,6 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   StreamSubscription<WifiP2PInfo>? _streamWifiInfo;
   StreamSubscription<List<DiscoveredPeers>>? _streamPeers;
 
-  // String host_ip_address = "";
-
   String videoUrl = "";
 
   final TextEditingController _urlController = TextEditingController();
@@ -58,15 +58,12 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    BackButtonInterceptor.add(myInterceptor);
+    // BackButtonInterceptor.add(myInterceptor);
     _init();
   }
 
   @override
   void dispose() {
-    // if (player.chewieController != null && player.videoPlayerController != null) {
-    //   player.dispose();
-    // }
     WidgetsBinding.instance.removeObserver(this);
     _flutterP2pConnectionPlugin.unregister();
     super.dispose();
@@ -90,10 +87,6 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         if (wifiP2PInfo == null) {
           logger.d("SETSTATE wifip2pinfo is null");
         }
-        // logger.d("SETSTATE main groupowner addr - ${wifiP2PInfo?.groupOwnerAddress}");
-        p2p_util_obj.wifiP2PInfo = wifiP2PInfo;
-        // logger.d("SETSTATE util's groupowner addr - ${p2p_util_obj.wifiP2PInfo?.groupOwnerAddress}");
-        // }
       });
     });
     _streamPeers = _flutterP2pConnectionPlugin.streamPeers().listen((event) {
@@ -101,23 +94,11 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         peers = event;
       });
     });
-    player = video_utils(
-        // ignore: use_build_context_synchronously
-        context: context,
-        clientPageRoute: ModalRoute.of(context));
-    permissions = Permissions(
-        p2pObj: _flutterP2pConnectionPlugin,
-        // ignore: use_build_context_synchronously
-        context: context);
+    player = video_utils(context: context, clientPageRoute: ModalRoute.of(context));
+    permissions = Permissions(p2pObj: _flutterP2pConnectionPlugin, context: context);
     permissions.checkPermissions();
     // to discover hosts
-    p2p_util_obj = p2p_utils(
-        p2pObj: _flutterP2pConnectionPlugin,
-        // ignore: use_build_context_synchronously
-        context: context,
-        permissions: permissions,
-        wifiP2PInfo: wifiP2PInfo,
-        player: player);
+    p2p_util_obj = p2p_utils(p2pObj: _flutterP2pConnectionPlugin, context: context, permissions: permissions, player: player);
     p2p_util_obj.discover();
   }
 
@@ -146,11 +127,10 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     );
   }
 
-   bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
-    logger.d("BACK BUTTON!"); 
+  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
+    logger.d("BACK BUTTON!");
     return true;
   }
-
 
   var logger = Logger(
     printer: PrettyPrinter(),
@@ -210,32 +190,18 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                               TextButton(
                                 onPressed: () async {
                                   Navigator.of(context).pop();
-                                  // await _flutterP2pConnectionPlugin.connect(peers[index].deviceAddress);
-
                                   await p2p_util_obj.connectToHost(peers[index].deviceAddress);
-
-                                  // await Future.delayed(const Duration(seconds: 2));
-                                  // logger.d("BAHAR - wifi - ${wifiP2PInfo == null}...group - ${wifiP2PInfo!.groupOwnerAddress.isEmpty}");
 
                                   while (wifiP2PInfo == null) {
                                     // logger.d("wifi - $wifiP2PInfo...group - ${wifiP2PInfo!.groupOwnerAddress.isEmpty}");
                                     await Future.delayed(const Duration(milliseconds: 200));
                                   }
+                                  while (wifiP2PInfo!.groupOwnerAddress.isEmpty) {
+                                    await Future.delayed(const Duration(milliseconds: 200));
+                                  }
 
-                                  // if(wifiP2PInfo != null){
-                                    while(wifiP2PInfo!.groupOwnerAddress.isEmpty){
-                                      await Future.delayed(const Duration(milliseconds: 200));
-                                    }
-                                  // }
-
-                                
-
-                                  p2p_util_obj.wifiP2PInfo = wifiP2PInfo;
                                   logger.d("Group owneradddress - ${wifiP2PInfo?.groupOwnerAddress}");
-
-                                  p2p_util_obj.connectToSocket(wifiP2PInfo?.groupOwnerAddress);
-
-                                  // snack("connected: $bo");
+                                  p2p_util_obj.connectToSocket(wifiP2PInfo!.groupOwnerAddress);
                                 },
                                 child: const Text("connect"),
                               ),
@@ -301,45 +267,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
               },
               child: const Text("get group info"),
             ),
-            // Call internally
-            ElevatedButton(
-              onPressed: () async {
-                p2p_util_obj.discover();
-                // snack("discovering $discovering");
-              },
-              child: const Text("discover"),
-            ),
-            // Call internally to get host ip:port
-            // ElevatedButton(
-            //   onPressed: () async {
-            //     p2p_util_obj.connectToSocket();
-            //   },
-            //   child: const Text("connect to socket"),
-            // ),
-            // Play stream when gets host's ip:port from socket
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: TextField(
-                controller: _urlController,
-                decoration: const InputDecoration(
-                  labelText: 'Enter HLS Stream URL',
-                ),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                String url = _urlController.text;
-                if (url.isNotEmpty) {
-                  player.startInit(url);
-                } else {
-                  // Optionally, show a message if the URL field is empty
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please enter a URL')),
-                  );
-                }
-              },
-              child: const Text('Play HLS Stream'),
-            ),
+            IconButton(onPressed: p2p_util_obj.discover, icon: const Icon(Icons.refresh_rounded)),
           ],
         ),
       ),

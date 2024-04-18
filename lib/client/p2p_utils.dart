@@ -8,11 +8,11 @@ class p2p_utils {
   final FlutterP2pConnection p2pObj;
   final BuildContext context;
   final Permissions permissions;
-  WifiP2PInfo? wifiP2PInfo;
+  // WifiP2PInfo? wifiP2PInfo;
   video_utils player;
   String hostIpAddress = "";
 
-  p2p_utils({required this.p2pObj, required this.context, required this.permissions, required this.wifiP2PInfo, required this.player});
+  p2p_utils({required this.p2pObj, required this.context, required this.permissions, required this.player});
 
   void snack(String msg) async {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -29,24 +29,21 @@ class p2p_utils {
     printer: PrettyPrinter(),
   );
 
-  Future<bool> discover() async {
-    return await p2pObj.discover();
+  Future<void> discover() async {
+    await p2pObj.discover();
   }
 
   Future<void> connectToHost(String deviceAddress) async {
-
-    bool? isConnected = await p2pObj.connect(deviceAddress);
-
+    await p2pObj.connect(deviceAddress);
     logger.d("Connecting to host via a socket");
-
   }
 
   // Future<void> connectToSocket(String )
 
-  Future<void> startSocket() async {
-    if (wifiP2PInfo != null) {
+  Future<void> startSocket(String? groupOwnerAddress) async {
+    if (groupOwnerAddress != null) {
       bool started = await p2pObj.startSocket(
-        groupOwnerAddress: wifiP2PInfo!.groupOwnerAddress,
+        groupOwnerAddress: groupOwnerAddress,
         downloadPath: "/storage/emulated/0/Download/",
         maxConcurrentDownloads: 2,
         deleteOnError: true,
@@ -65,20 +62,16 @@ class p2p_utils {
         },
       );
       snack("open socket: $started");
+    } else {
+      logger.d("Connecting to socket...${groupOwnerAddress ?? "empty"}");
     }
   }
 
   Future<void> connectToSocket(String? groupOwnerAddress) async {
-    if (wifiP2PInfo == null) {
-      logger.d("wifip2pinfo is null in util");
-    }
-    // if (wifiP2PInfo != null) {
-    else{
-      logger.d("Connecting to socket...${groupOwnerAddress!.isEmpty ? "empty" : groupOwnerAddress}");
+    if (groupOwnerAddress != null) {
       await p2pObj.connectToSocket(
-        
         // groupOwnerAddress: wifiP2PInfo!.groupOwnerAddress,
-        groupOwnerAddress: groupOwnerAddress!,
+        groupOwnerAddress: groupOwnerAddress,
         downloadPath: "/storage/emulated/0/Download/",
         maxConcurrentDownloads: 3,
         deleteOnError: true,
@@ -104,6 +97,8 @@ class p2p_utils {
           }
         },
       );
+    } else {
+      logger.d("Connecting to socket...${groupOwnerAddress ?? "empty"}");
     }
   }
 
