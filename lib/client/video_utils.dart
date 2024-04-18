@@ -44,8 +44,8 @@
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
-import 'package:streamer/client/client_page.dart';
 import 'package:video_player/video_player.dart';
+import 'package:back_button_interceptor/back_button_interceptor.dart';
 
 class VideoPlayerPage extends StatefulWidget {
   // final ChewieController chewieController;
@@ -59,6 +59,13 @@ class VideoPlayerPage extends StatefulWidget {
 
 class _VideoPlayerPageState extends State<VideoPlayerPage> {
   @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    BackButtonInterceptor.add(myInterceptor);
+  }
+
+  @override
   void dispose() {
     if (widget.player.chewieController != null && widget.player.videoPlayerController != null) {
       widget.player.dispose();
@@ -70,45 +77,12 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
     printer: PrettyPrinter(),
   );
 
-  void _showBackDialog() {
-    showDialog<void>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Are you sure?'),
-          content: const Text(
-            'Are you sure you want to leave this page?',
-          ),
-          actions: <Widget>[
-            TextButton(
-              style: TextButton.styleFrom(
-                textStyle: Theme.of(context).textTheme.labelLarge,
-              ),
-              child: const Text('Nevermind'),
-              onPressed: () {
-                Navigator.pop(context);
-              },
-            ),
-            TextButton(
-              style: TextButton.styleFrom(
-                textStyle: Theme.of(context).textTheme.labelLarge,
-              ),
-              child: const Text('Leave'),
-              onPressed: () {
-                Navigator.pop(context); // Close the dialog
-                // if (widget.player.clientPageRoute != null) {
-                //   Navigator.popUntil(context, (route) => route == widget.player.clientPageRoute);
-                //   logger.d("Going to Client Page");
-                // } else {
-                //   Navigator.pop(context); // Fallback to popping the current page if clientPageRoute is null
-                //   logger.d("Going to Home Page");
-                // }
-              },
-            ),
-          ],
-        );
-      },
-    );
+  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
+    logger.d("BACK BUTTON!");
+    if(mounted){
+      Navigator.pop(context);
+    }
+    return true;
   }
 
   Widget build(BuildContext context) {

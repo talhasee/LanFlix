@@ -1,3 +1,4 @@
+import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter_p2p_connection/flutter_p2p_connection.dart';
@@ -57,6 +58,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    BackButtonInterceptor.add(myInterceptor);
     _init();
   }
 
@@ -144,6 +146,12 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     );
   }
 
+   bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
+    logger.d("BACK BUTTON!"); 
+    return true;
+  }
+
+
   var logger = Logger(
     printer: PrettyPrinter(),
   );
@@ -207,7 +215,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                                   await p2p_util_obj.connectToHost(peers[index].deviceAddress);
 
                                   // await Future.delayed(const Duration(seconds: 2));
-                                  logger.d("BAHAR - wifi - ${wifiP2PInfo == null}...group - ${wifiP2PInfo!.groupOwnerAddress.isEmpty}");
+                                  // logger.d("BAHAR - wifi - ${wifiP2PInfo == null}...group - ${wifiP2PInfo!.groupOwnerAddress.isEmpty}");
 
                                   while (wifiP2PInfo == null) {
                                     // logger.d("wifi - $wifiP2PInfo...group - ${wifiP2PInfo!.groupOwnerAddress.isEmpty}");
