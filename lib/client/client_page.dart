@@ -1,11 +1,9 @@
-import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter_p2p_connection/flutter_p2p_connection.dart';
 import 'package:logger/logger.dart';
 import 'package:streamer/client/video_utils.dart';
 import 'package:streamer/utils/permissions.dart';
-import 'package:video_player/video_player.dart';
 import 'package:streamer/client/p2p_utils.dart';
 
 void main() {
@@ -64,7 +62,9 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
 
   @override
   void dispose() {
-    player.dispose();
+    // if (player.chewieController != null && player.videoPlayerController != null) {
+    //   player.dispose();
+    // }
     WidgetsBinding.instance.removeObserver(this);
     _flutterP2pConnectionPlugin.unregister();
     super.dispose();
@@ -85,8 +85,9 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     _streamWifiInfo = _flutterP2pConnectionPlugin.streamWifiP2PInfo().listen((event) {
       setState(() {
         wifiP2PInfo = event;
-        //  if (p2p_util_obj.wifiP2PInfo == null) {
-        // logger.d("SETSTATE util's wifip2pinfo is null");
+        if (wifiP2PInfo == null) {
+          logger.d("SETSTATE wifip2pinfo is null");
+        }
         // logger.d("SETSTATE main groupowner addr - ${wifiP2PInfo?.groupOwnerAddress}");
         p2p_util_obj.wifiP2PInfo = wifiP2PInfo;
         // logger.d("SETSTATE util's groupowner addr - ${p2p_util_obj.wifiP2PInfo?.groupOwnerAddress}");
@@ -100,7 +101,8 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     });
     player = video_utils(
         // ignore: use_build_context_synchronously
-        context: context);
+        context: context,
+        clientPageRoute: ModalRoute.of(context));
     permissions = Permissions(
         p2pObj: _flutterP2pConnectionPlugin,
         // ignore: use_build_context_synchronously
@@ -204,13 +206,27 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
 
                                   await p2p_util_obj.connectToHost(peers[index].deviceAddress);
 
-                                  await Future.delayed(const Duration(seconds: 2));
+                                  // await Future.delayed(const Duration(seconds: 2));
+                                  logger.d("BAHAR - wifi - ${wifiP2PInfo == null}...group - ${wifiP2PInfo!.groupOwnerAddress.isEmpty}");
+
+                                  while (wifiP2PInfo == null) {
+                                    // logger.d("wifi - $wifiP2PInfo...group - ${wifiP2PInfo!.groupOwnerAddress.isEmpty}");
+                                    await Future.delayed(const Duration(milliseconds: 200));
+                                  }
+
+                                  // if(wifiP2PInfo != null){
+                                    while(wifiP2PInfo!.groupOwnerAddress.isEmpty){
+                                      await Future.delayed(const Duration(milliseconds: 200));
+                                    }
+                                  // }
+
+                                
 
                                   p2p_util_obj.wifiP2PInfo = wifiP2PInfo;
-
-                                  
+                                  logger.d("Group owneradddress - ${wifiP2PInfo?.groupOwnerAddress}");
 
                                   p2p_util_obj.connectToSocket(wifiP2PInfo?.groupOwnerAddress);
+
                                   // snack("connected: $bo");
                                 },
                                 child: const Text("connect"),

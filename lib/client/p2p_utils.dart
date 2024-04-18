@@ -73,35 +73,38 @@ class p2p_utils {
       logger.d("wifip2pinfo is null in util");
     }
     // if (wifiP2PInfo != null) {
-    await p2pObj.connectToSocket(
-      // groupOwnerAddress: wifiP2PInfo!.groupOwnerAddress,
-      groupOwnerAddress: groupOwnerAddress!,
-      downloadPath: "/storage/emulated/0/Download/",
-      maxConcurrentDownloads: 3,
-      deleteOnError: true,
-      onConnect: (address) {
-        logger.d("connected to socket: $address");
-        snack("connected to socket: $address");
-      },
-      transferUpdate: (transfer) {
-        // if (transfer.count == 0) transfer.cancelToken?.cancel();
-        if (transfer.completed) {
-          snack("${transfer.failed ? "failed to ${transfer.receiving ? "receive" : "send"}" : transfer.receiving ? "received" : "sent"}: ${transfer.filename}");
-        }
-        print(
-            "ID: ${transfer.id}, FILENAME: ${transfer.filename}, PATH: ${transfer.path}, COUNT: ${transfer.count}, TOTAL: ${transfer.total}, COMPLETED: ${transfer.completed}, FAILED: ${transfer.failed}, RECEIVING: ${transfer.receiving}");
-      },
-      receiveString: (req) async {
-        snack(req);
-        String mssg = req;
-        if (mssg.startsWith("&HOST_ADDR")) {
-          hostIpAddress = mssg.substring(10);
-          logger.d("MESSAGE - $hostIpAddress");
-          player.startInit("http://$hostIpAddress/");
-        }
-      },
-    );
-    // }
+    else{
+      logger.d("Connecting to socket...${groupOwnerAddress!.isEmpty ? "empty" : groupOwnerAddress}");
+      await p2pObj.connectToSocket(
+        
+        // groupOwnerAddress: wifiP2PInfo!.groupOwnerAddress,
+        groupOwnerAddress: groupOwnerAddress!,
+        downloadPath: "/storage/emulated/0/Download/",
+        maxConcurrentDownloads: 3,
+        deleteOnError: true,
+        onConnect: (address) {
+          logger.d("connected to socket: $address");
+          snack("connected to socket: $address");
+        },
+        transferUpdate: (transfer) {
+          // if (transfer.count == 0) transfer.cancelToken?.cancel();
+          if (transfer.completed) {
+            snack("${transfer.failed ? "failed to ${transfer.receiving ? "receive" : "send"}" : transfer.receiving ? "received" : "sent"}: ${transfer.filename}");
+          }
+          print(
+              "ID: ${transfer.id}, FILENAME: ${transfer.filename}, PATH: ${transfer.path}, COUNT: ${transfer.count}, TOTAL: ${transfer.total}, COMPLETED: ${transfer.completed}, FAILED: ${transfer.failed}, RECEIVING: ${transfer.receiving}");
+        },
+        receiveString: (req) async {
+          snack(req);
+          String mssg = req;
+          if (mssg.startsWith("&HOST_ADDR")) {
+            hostIpAddress = mssg.substring(10);
+            logger.d("MESSAGE - $hostIpAddress");
+            player.startInit("http://$hostIpAddress/");
+          }
+        },
+      );
+    }
   }
 
   Future<void> closeSocketConnection() async {
