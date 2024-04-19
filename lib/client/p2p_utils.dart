@@ -38,6 +38,10 @@ class p2p_utils {
     logger.d("Connecting to host via a socket");
   }
 
+  Future<void> disconnectFromHost() async {
+    await p2pObj.removeGroup();
+  }
+
   // Future<void> connectToSocket(String )
 
   Future<void> startSocket(String? groupOwnerAddress) async {
@@ -89,11 +93,13 @@ class p2p_utils {
         },
         receiveString: (req) async {
           snack(req);
-          String mssg = req;
-          if (mssg.startsWith("&HOST_ADDR")) {
-            hostIpAddress = mssg.substring(10);
+          String msg = req;
+          if (msg.startsWith("&VIDEO")) {
+            List<String> videoData = msg.substring(6).split('|');
+            hostIpAddress = videoData[0];
+            int startAt = int.parse(videoData[1]);
             logger.d("MESSAGE - $hostIpAddress");
-            player.startInit("http://$hostIpAddress/");
+            player.startInit("http://$hostIpAddress/", startAt);
           }
         },
       );

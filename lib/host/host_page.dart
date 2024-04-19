@@ -211,7 +211,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       setState(() {
         serverAddress = addr;
       });
-      sendDataAsMessage("&HOST_ADDR$serverAddress");
+      sendDataAsMessage("&VIDEO$serverAddress|8"); // add duration here
     } on PlatformException catch (e) {
       logger.d("Error in platform channel");
       logger.e(e);

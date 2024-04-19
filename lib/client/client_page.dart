@@ -47,7 +47,6 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   WifiP2PInfo? wifiP2PInfo;
   StreamSubscription<WifiP2PInfo>? _streamWifiInfo;
   StreamSubscription<List<DiscoveredPeers>>? _streamPeers;
-
   String videoUrl = "";
 
   final TextEditingController _urlController = TextEditingController();
@@ -139,91 +138,95 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.amber[300],
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: const Color.fromARGB(255, 234, 175, 36),
-        title: const Text('Flutter p2p connection plugin'),
+        backgroundColor: Colors.white,
+        leading: Image.asset("lib/assets/images/logo.png"),
       ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Text("Connected to Host IP: ${wifiP2PInfo == null ? "null" : wifiP2PInfo?.groupOwnerAddress}"),
-            wifiP2PInfo != null
-                ? Text(
-                    "connected: ${wifiP2PInfo?.isConnected}, isGroupOwner: ${wifiP2PInfo?.isGroupOwner}, groupFormed: ${wifiP2PInfo?.groupFormed}, groupOwnerAddress: ${wifiP2PInfo?.groupOwnerAddress}, clients: ${wifiP2PInfo?.clients}")
-                : const SizedBox.shrink(),
-            const SizedBox(height: 10),
-            const Text("PEERS:"),
-            SizedBox(
-              height: 100,
-              width: MediaQuery.of(context).size.width,
-              child: ListView.builder(
-                scrollDirection: Axis.vertical,
-                itemCount: peers.length,
-                itemBuilder: (context, index) => Center(
-                  child: GestureDetector(
-                    onTap: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => Center(
-                          child: AlertDialog(
-                            content: SizedBox(
-                              height: 200,
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text("name: ${peers[index].deviceName}"),
-                                  Text("address: ${peers[index].deviceAddress}"),
-                                  Text("isGroupOwner: ${peers[index].isGroupOwner}"),
-                                  Text("isServiceDiscoveryCapable: ${peers[index].isServiceDiscoveryCapable}"),
-                                  Text("primaryDeviceType: ${peers[index].primaryDeviceType}"),
-                                  Text("secondaryDeviceType: ${peers[index].secondaryDeviceType}"),
-                                  Text("status: ${peers[index].status}"),
-                                ],
-                              ),
+      body: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            "Host IP Address: ${wifiP2PInfo == null ? "null" : wifiP2PInfo?.groupOwnerAddress}",
+            style: const TextStyle(
+              fontStyle: FontStyle.italic,
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
+          ),
+          // wifiP2PInfo != null
+          //     ? Text(
+          //         "connected: ${wifiP2PInfo?.isConnected}, isGroupOwner: ${wifiP2PInfo?.isGroupOwner}, groupFormed: ${wifiP2PInfo?.groupFormed}, groupOwnerAddress: ${wifiP2PInfo?.groupOwnerAddress}, clients: ${wifiP2PInfo?.clients}")
+          //     : const SizedBox.shrink(),
+          const SizedBox(height: 10),
+          const Text("PEERS:"),
+          SizedBox(
+            height: 100,
+            width: MediaQuery.of(context).size.width,
+            child: ListView.builder(
+              scrollDirection: Axis.vertical,
+              itemCount: peers.length,
+              itemBuilder: (context, index) => Center(
+                child: GestureDetector(
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => Center(
+                        child: AlertDialog(
+                          content: SizedBox(
+                            height: 200,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("name: ${peers[index].deviceName}"),
+                                Text("address: ${peers[index].deviceAddress}"),
+                                Text("isGroupOwner: ${peers[index].isGroupOwner}"),
+                                Text("isServiceDiscoveryCapable: ${peers[index].isServiceDiscoveryCapable}"),
+                                Text("primaryDeviceType: ${peers[index].primaryDeviceType}"),
+                                Text("secondaryDeviceType: ${peers[index].secondaryDeviceType}"),
+                                Text("status: ${peers[index].status}"),
+                              ],
                             ),
-                            actions: [
-                              TextButton(
-                                onPressed: () async {
-                                  Navigator.of(context).pop();
-                                  await p2p_util_obj.connectToHost(peers[index].deviceAddress);
-
-                                  while (wifiP2PInfo == null) {
-                                    // logger.d("wifi - $wifiP2PInfo...group - ${wifiP2PInfo!.groupOwnerAddress.isEmpty}");
-                                    await Future.delayed(const Duration(milliseconds: 200));
-                                  }
-                                  while (wifiP2PInfo!.groupOwnerAddress.isEmpty) {
-                                    await Future.delayed(const Duration(milliseconds: 200));
-                                  }
-
-                                  logger.d("Group owneradddress - ${wifiP2PInfo?.groupOwnerAddress}");
-                                  p2p_util_obj.connectToSocket(wifiP2PInfo!.groupOwnerAddress);
-                                },
-                                child: const Text("connect"),
-                              ),
-                            ],
                           ),
+                          actions: [
+                            TextButton(
+                              onPressed: () async {
+                                Navigator.of(context).pop();
+                                await p2p_util_obj.connectToHost(peers[index].deviceAddress);
+
+                                while (wifiP2PInfo == null) {
+                                  // logger.d("wifi - $wifiP2PInfo...group - ${wifiP2PInfo!.groupOwnerAddress.isEmpty}");
+                                  await Future.delayed(const Duration(milliseconds: 200));
+                                }
+                                while (wifiP2PInfo!.groupOwnerAddress.isEmpty) {
+                                  await Future.delayed(const Duration(milliseconds: 200));
+                                }
+
+                                logger.d("Group owneradddress - ${wifiP2PInfo?.groupOwnerAddress}");
+                                p2p_util_obj.connectToSocket(wifiP2PInfo!.groupOwnerAddress);
+                              },
+                              child: const Text("connect"),
+                            ),
+                          ],
                         ),
-                      );
-                    },
-                    child: Container(
-                      height: 80,
-                      width: 80,
-                      decoration: BoxDecoration(
-                        color: Colors.grey,
-                        borderRadius: BorderRadius.circular(50),
                       ),
-                      child: Center(
-                        child: Text(
-                          peers[index].deviceName.toString().characters.first.toUpperCase(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 30,
-                          ),
+                    );
+                  },
+                  child: Container(
+                    height: 80,
+                    width: 80,
+                    decoration: BoxDecoration(
+                      color: Colors.grey,
+                      borderRadius: BorderRadius.circular(50),
+                    ),
+                    child: Center(
+                      child: Text(
+                        peers[index].deviceName.toString().characters.first.toUpperCase(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 30,
                         ),
                       ),
                     ),
@@ -231,45 +234,42 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                 ),
               ),
             ),
-            ElevatedButton(
-              onPressed: () async {
-                bool? removed = await _flutterP2pConnectionPlugin.removeGroup();
-                snack("removed group: $removed");
-              },
-              child: const Text("remove group/disconnect"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                var info = await _flutterP2pConnectionPlugin.groupInfo();
-                showDialog(
-                  context: context,
-                  builder: (context) => Center(
-                    child: Dialog(
-                      child: SizedBox(
-                        height: 200,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text("groupNetworkName: ${info?.groupNetworkName}"),
-                              Text("passPhrase: ${info?.passPhrase}"),
-                              Text("isGroupOwner: ${info?.isGroupOwner}"),
-                              Text("clients: ${info?.clients}"),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-              child: const Text("get group info"),
-            ),
-            IconButton(onPressed: p2p_util_obj.discover, icon: const Icon(Icons.refresh_rounded)),
-          ],
-        ),
+          ),
+          IconButton(
+            onPressed: p2p_util_obj.disconnectFromHost,
+            icon: const Icon(Icons.group_remove),
+          ),
+          // ElevatedButton(
+          //   onPressed: () async {
+          //     var info = await _flutterP2pConnectionPlugin.groupInfo();
+          //     showDialog(
+          //       context: context,
+          //       builder: (context) => Center(
+          //         child: Dialog(
+          //           child: SizedBox(
+          //             height: 200,
+          //             child: Padding(
+          //               padding: const EdgeInsets.symmetric(horizontal: 10),
+          //               child: Column(
+          //                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          //                 crossAxisAlignment: CrossAxisAlignment.start,
+          //                 children: [
+          //                   Text("groupNetworkName: ${info?.groupNetworkName}"),
+          //                   Text("passPhrase: ${info?.passPhrase}"),
+          //                   Text("isGroupOwner: ${info?.isGroupOwner}"),
+          //                   Text("clients: ${info?.clients}"),
+          //                 ],
+          //               ),
+          //             ),
+          //           ),
+          //         ),
+          //       ),
+          //     );
+          //   },
+          //   child: const Text("get group info"),
+          // ),
+          IconButton(onPressed: p2p_util_obj.discover, icon: const Icon(Icons.refresh_rounded)),
+        ],
       ),
     );
   }

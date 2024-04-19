@@ -1,46 +1,3 @@
-// import 'package:chewie/chewie.dart';
-// import 'package:flutter/material.dart';
-// import 'package:logger/logger.dart';
-// import 'package:video_player/video_player.dart';
-
-// class video_utils {
-//   VideoPlayerController? videoPlayerController;
-//   ChewieController? chewieController;
-//   final BuildContext context;
-
-//   video_utils({required this.context});
-
-//    var logger = Logger(
-//     printer: PrettyPrinter(),
-//   );
-
-//   void dispose() {
-//    logger.d("DISPOSED PLAYER");
-//     if (videoPlayerController != null) {
-//       videoPlayerController?.dispose();
-//     }
-//     if (chewieController != null) {
-//       chewieController?.dispose();
-//     }
-//   }
-
-//   void startInit(String serverURL) {
-//     // String serverURL = 'http://$host_ip_address:8080/video/stream';
-//     videoPlayerController = VideoPlayerController.networkUrl(Uri.parse(serverURL));
-//     chewieController = ChewieController(
-//       videoPlayerController: videoPlayerController!,
-//       aspectRatio: 16 / 9,
-//       autoPlay: true,
-//     );
-//     Navigator.push(
-//       context,
-//       MaterialPageRoute(
-//         builder: (context) => Chewie(controller: chewieController!),
-//       ),
-//     );
-//   }
-// }
-
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
@@ -79,7 +36,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
 
   bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
     logger.d("BACK BUTTON!");
-    if(mounted){
+    if (mounted) {
       Navigator.pop(context);
     }
     return true;
@@ -101,14 +58,16 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
                 // _showBackDialog();
                 logger.d("Back button is clicked");
               },
-              child: Container(
-                // Set explicit constraints for Chewie
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height,
-                  maxWidth: MediaQuery.of(context).size.width,
-                ),
-                child: Chewie(
-                  controller: widget.player.chewieController!,
+              child: Expanded(
+                child: Container(
+                  // Set explicit constraints for Chewie
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height,
+                    maxWidth: MediaQuery.of(context).size.width,
+                  ),
+                  child: Chewie(
+                    controller: widget.player.chewieController!,
+                  ),
                 ),
               ),
             ),
@@ -141,11 +100,13 @@ class video_utils {
     }
   }
 
-  void startInit(String serverURL) {
+  void startInit(String serverURL, int startAt) {
     videoPlayerController = VideoPlayerController.networkUrl(Uri.parse(serverURL));
     chewieController = ChewieController(
       videoPlayerController: videoPlayerController!,
-      aspectRatio: 16 / 9,
+      isLive: true, // live rakhna hai ya ni
+      startAt: Duration(seconds: startAt),
+      showOptions: false,
       autoPlay: true,
     );
 
