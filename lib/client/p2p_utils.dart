@@ -53,20 +53,20 @@ class p2p_utils {
         maxConcurrentDownloads: 2,
         deleteOnError: true,
         onConnect: (name, address) {
-          snack("$name connected to socket with address: $address");
+          // snack("$name connected to socket with address: $address");
         },
         transferUpdate: (transfer) {
-          if (transfer.completed) {
-            snack("${transfer.failed ? "failed to ${transfer.receiving ? "receive" : "send"}" : transfer.receiving ? "received" : "sent"}: ${transfer.filename}");
-          }
-          print(
-              "ID: ${transfer.id}, FILENAME: ${transfer.filename}, PATH: ${transfer.path}, COUNT: ${transfer.count}, TOTAL: ${transfer.total}, COMPLETED: ${transfer.completed}, FAILED: ${transfer.failed}, RECEIVING: ${transfer.receiving}");
+          // if (transfer.completed) {
+          //   snack("${transfer.failed ? "failed to ${transfer.receiving ? "receive" : "send"}" : transfer.receiving ? "received" : "sent"}: ${transfer.filename}");
+          // }
+          // print(
+          //     "ID: ${transfer.id}, FILENAME: ${transfer.filename}, PATH: ${transfer.path}, COUNT: ${transfer.count}, TOTAL: ${transfer.total}, COMPLETED: ${transfer.completed}, FAILED: ${transfer.failed}, RECEIVING: ${transfer.receiving}");
         },
         receiveString: (req) async {
-          snack(req);
+          // snack(req);
         },
       );
-      snack("open socket: $started");
+      // snack("open socket: $started");
     } else {
       logger.d("Connecting to socket...${groupOwnerAddress ?? "empty"}");
     }
@@ -82,18 +82,18 @@ class p2p_utils {
         deleteOnError: true,
         onConnect: (address) {
           logger.d("connected to socket: $address");
-          snack("connected to socket: $address");
+          // snack("connected to socket: $address");
         },
         transferUpdate: (transfer) {
-          // if (transfer.count == 0) transfer.cancelToken?.cancel();
-          if (transfer.completed) {
-            snack("${transfer.failed ? "failed to ${transfer.receiving ? "receive" : "send"}" : transfer.receiving ? "received" : "sent"}: ${transfer.filename}");
-          }
-          print(
-              "ID: ${transfer.id}, FILENAME: ${transfer.filename}, PATH: ${transfer.path}, COUNT: ${transfer.count}, TOTAL: ${transfer.total}, COMPLETED: ${transfer.completed}, FAILED: ${transfer.failed}, RECEIVING: ${transfer.receiving}");
+          // // if (transfer.count == 0) transfer.cancelToken?.cancel();
+          // if (transfer.completed) {
+          //   snack("${transfer.failed ? "failed to ${transfer.receiving ? "receive" : "send"}" : transfer.receiving ? "received" : "sent"}: ${transfer.filename}");
+          // }
+          // print(
+          //     "ID: ${transfer.id}, FILENAME: ${transfer.filename}, PATH: ${transfer.path}, COUNT: ${transfer.count}, TOTAL: ${transfer.total}, COMPLETED: ${transfer.completed}, FAILED: ${transfer.failed}, RECEIVING: ${transfer.receiving}");
         },
         receiveString: (req) async {
-          snack(req);
+          // snack(req);
           String msg = req;
           // bool isVerified = true;
           if (msg.startsWith("&VIDEO")) {
