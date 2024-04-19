@@ -65,7 +65,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   String videoPath = "";
   HttpServer? server;
 
-  late Future<String> _addressFuture = Future.value("Creating....");
+  late Future<String> _addressFuture = Future.value(" Creating....");
   @override
   void initState() {
     super.initState();
@@ -121,9 +121,9 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         Permissions(p2pObj: _flutterP2pConnectionPlugin, context: context);
     //check location, wifi and Storage permission
     bool hasPermission = await permissions.checkPermissions();
-    if (!hasPermission) {
-      snack("Don't have the required permissions to run the app.");
-    }
+    // if (!hasPermission) {
+    //   // snack("Don't have the required permissions to run the app.");
+    // }
     if (wifiP2PInfo == null) {
       logger.d("yes its null");
     }
@@ -149,14 +149,14 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     //starting group formation
     bool created = await p2p_util_obj.createGroup();
 
-    snack("CREATION1 $created");
+    // snack("CREATION1 $created");
     if (!created) {
       await p2p_util_obj.removeGroup();
     }
 
     await Future.delayed(const Duration(seconds: 2));
     bool createdAgain = await p2p_util_obj.createGroup();
-    snack("CREATION2 $createdAgain");
+    // snack("CREATION2 $createdAgain");
 
     if (createdAgain || created) {
       //start socket so that whenever client comes no need to connect it manually

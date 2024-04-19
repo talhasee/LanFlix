@@ -35,7 +35,7 @@ class p2p_utils {
     bool? groupFormed = wifiP2PInfo?.groupFormed;
     if (enabledLocation && (groupFormed == null || groupFormed == false)) {
       bool groupDeletion = await p2pObj.createGroup();
-      snack("Creating group $enabledLocation,  $groupFormed, $groupDeletion");
+      // snack("Creating group $enabledLocation,  $groupFormed, $groupDeletion");
       return groupDeletion;
     } else if (!enabledLocation) {
       snack("Please turn on Location!! $enabledLocation,  $groupFormed");
@@ -53,10 +53,10 @@ class p2p_utils {
     bool? groupFormed = wifiP2PInfo?.groupFormed;
     if (enabledLocation && (groupFormed != null && groupFormed == true)) {
       bool groupDeletion = await p2pObj.removeGroup();
-      snack("Removing group $enabledLocation,  $groupFormed, $groupDeletion");
+      // snack("Removing group $enabledLocation,  $groupFormed, $groupDeletion");
       return groupDeletion;
     } else if (!enabledLocation) {
-      snack("Please turn on Location!! $enabledLocation,  $groupFormed");
+      snack("Please turn on Location!!");
       permissions.enableLocation();
       return false;
     } else if (groupFormed == null || groupFormed == false) {
@@ -78,20 +78,20 @@ class p2p_utils {
         deleteOnError: true,
         onConnect: (name, address) {
           logger.d("$name connected to socket with address: $address");
-          snack("$name connected to socket with address: $address");
+          // snack("$name connected to socket with address: $address");
         },
         transferUpdate: (transfer) {
-          if (transfer.completed) {
-            snack("${transfer.failed ? "failed to ${transfer.receiving ? "receive" : "send"}" : transfer.receiving ? "received" : "sent"}: ${transfer.filename}");
-          }
-          print(
-              "ID: ${transfer.id}, FILENAME: ${transfer.filename}, PATH: ${transfer.path}, COUNT: ${transfer.count}, TOTAL: ${transfer.total}, COMPLETED: ${transfer.completed}, FAILED: ${transfer.failed}, RECEIVING: ${transfer.receiving}");
+          // if (transfer.completed) {
+          //   snack("${transfer.failed ? "failed to ${transfer.receiving ? "receive" : "send"}" : transfer.receiving ? "received" : "sent"}: ${transfer.filename}");
+          // }
+          // print(
+          //     "ID: ${transfer.id}, FILENAME: ${transfer.filename}, PATH: ${transfer.path}, COUNT: ${transfer.count}, TOTAL: ${transfer.total}, COMPLETED: ${transfer.completed}, FAILED: ${transfer.failed}, RECEIVING: ${transfer.receiving}");
         },
         receiveString: (req) async {
-          snack(req);
+          // snack(req);
         },
       );
-      snack("open socket: $started");
+      // snack("open socket: $started");
     }
   }
 
@@ -107,14 +107,14 @@ class p2p_utils {
         },
         transferUpdate: (transfer) {
           // if (transfer.count == 0) transfer.cancelToken?.cancel();
-          if (transfer.completed) {
-            snack("${transfer.failed ? "failed to ${transfer.receiving ? "receive" : "send"}" : transfer.receiving ? "received" : "sent"}: ${transfer.filename}");
-          }
-          print(
-              "ID: ${transfer.id}, FILENAME: ${transfer.filename}, PATH: ${transfer.path}, COUNT: ${transfer.count}, TOTAL: ${transfer.total}, COMPLETED: ${transfer.completed}, FAILED: ${transfer.failed}, RECEIVING: ${transfer.receiving}");
+          // if (transfer.completed) {
+          //   snack("${transfer.failed ? "failed to ${transfer.receiving ? "receive" : "send"}" : transfer.receiving ? "received" : "sent"}: ${transfer.filename}");
+          // }
+          // print(
+          //     "ID: ${transfer.id}, FILENAME: ${transfer.filename}, PATH: ${transfer.path}, COUNT: ${transfer.count}, TOTAL: ${transfer.total}, COMPLETED: ${transfer.completed}, FAILED: ${transfer.failed}, RECEIVING: ${transfer.receiving}");
         },
         receiveString: (req) async {
-          snack(req);
+          // snack(req);
         },
       );
     }
