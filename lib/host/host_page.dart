@@ -2,6 +2,7 @@
 // ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables
 
 import 'dart:io';
+import 'dart:math';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:logger/logger.dart';
@@ -49,6 +50,11 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   bool hasPermission = false;
   WifiP2PInfo? wifiP2PInfo;
   String serverAddress = "";
+  String pin = "";
+  String showPinTxt = "";
+  final ListOfWidgets = <Widget>[Text("Private"), Text("Public")];
+  final List<bool> _selectedToggle = <bool>[false, true];
+  // String netState =
   // ignore: unused_field
   StreamSubscription<WifiP2PInfo>? _streamWifiInfo;
   // ignore: unused_field
@@ -217,7 +223,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       setState(() {
         serverAddress = addr;
       });
-      sendDataAsMessage("&VIDEO$serverAddress|8"); // add duration here
+      sendDataAsMessage("&VIDEO$serverAddress|8|$pin"); // add duration here
     } on PlatformException catch (e) {
       logger.d("Error in platform channel");
       logger.e(e);
@@ -252,7 +258,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                               'Fetching address...',
                               style: TextStyle(fontSize: 24),
                             ),
-                            SizedBox(height: 20), // Add some space between text and loading animation
+                            SizedBox(height: 14), // Add some space between text and loading animation
                             CircularProgressIndicator(),
                           ],
                         );
@@ -302,8 +308,50 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
               ),
               Column(
                 children: [
+                  ToggleButtons(
+                    direction: Axis.horizontal,
+                    onPressed: (int index) {
+                      setState(() {
+                        // The button that is tapped is set to true, and the others to false.
+                        for (int i = 0; i < _selectedToggle.length; i++) {
+                          _selectedToggle[i] = i == index;
+                          if (index == 0) {
+                            setState(() {
+                              pin = (1000 + Random().nextInt(9000)).toString();
+                              showPinTxt = "PIN:  $pin";
+                            });
+                          } else {
+                            pin == "----";
+                            showPinTxt = "";
+                          }
+                        }
+                      });
+                    },
+                    borderRadius: const BorderRadius.all(Radius.circular(8)),
+                    selectedBorderColor: Colors.red[700],
+                    selectedColor: Colors.white,
+                    fillColor: Color(0xffff5c00),
+                    color: Color(0xffff5c00),
+                    constraints: const BoxConstraints(
+                      minHeight: 40.0,
+                      minWidth: 80.0,
+                    ),
+                    isSelected: _selectedToggle,
+                    children: ListOfWidgets,
+                  ),
+                  SizedBox(
+                    height: 8,
+                  ),
                   Text(
-                    'SELECT MEIDA TO STREAM',
+                    showPinTxt,
+                    style: TextStyle(fontSize: 22),
+                  ),
+                ],
+              ),
+              Column(
+                children: [
+                  Text(
+                    'SELECT MEDIA TO STREAM',
                     style: TextStyle(fontSize: 22),
                   ),
                   SizedBox(height: 24),
@@ -333,7 +381,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                     ),
                   ),
                   SizedBox(
-                    height: 32,
+                    height: 22,
                   ),
                   Text(
                     fileName,

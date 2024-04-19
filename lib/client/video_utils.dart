@@ -137,7 +137,7 @@ class video_utils {
     }
   }
 
-  void startInit(String serverURL, int startAt) {
+  void startInit(String serverURL, int startAt, String pin) {
     videoPlayerController = VideoPlayerController.networkUrl(Uri.parse(serverURL));
     chewieController = ChewieController(
       videoPlayerController: videoPlayerController!,

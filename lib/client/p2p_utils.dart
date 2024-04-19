@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
+import 'package:streamer/client/otp_screen.dart';
 import 'package:streamer/client/video_utils.dart';
 import 'package:streamer/utils/permissions.dart';
 import 'package:flutter_p2p_connection/flutter_p2p_connection.dart';
@@ -94,12 +95,24 @@ class p2p_utils {
         receiveString: (req) async {
           snack(req);
           String msg = req;
+          // bool isVerified = true;
           if (msg.startsWith("&VIDEO")) {
             List<String> videoData = msg.substring(6).split('|');
             hostIpAddress = videoData[0];
             int startAt = int.parse(videoData[1]);
-            logger.d("MESSAGE - $hostIpAddress");
-            player.startInit("http://$hostIpAddress/", startAt);
+            String pin = videoData[2];
+            // logger.d("MESSAGE - $hostIpAddress");
+            if (pin != '----') {
+              bool otpVerified = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => OTPScreen(myCode: pin),
+                ),
+              );
+              if (otpVerified) {
+                player.startInit("http://$hostIpAddress/", startAt, pin);
+              }
+            }
           }
         },
       );
