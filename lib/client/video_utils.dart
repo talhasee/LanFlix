@@ -29,11 +29,11 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
 
   @override
   void dispose() {
+    BackButtonInterceptor.remove(myInterceptor);
     widget.player.chewieController?.removeListener(_onFullScreenChanged);
     if (widget.player.chewieController != null && widget.player.videoPlayerController != null) {
       widget.player.dispose();
     }
-    BackButtonInterceptor.remove(myInterceptor);
     super.dispose();
   }
 

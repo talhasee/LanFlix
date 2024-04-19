@@ -141,24 +141,40 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        leading: Image.asset("lib/assets/images/logo.png"),
-      ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          Image.asset(
+            "lib/assets/images/logo.png",
+            height: 92,
+          ),
+          //   "Host IP Address: ${wifiP2PInfo == null || wifiP2PInfo!.groupOwnerAddress.isEmpty ? "Not Connected" : wifiP2PInfo?.groupOwnerAddress.substring(1)}\n Host Name - ${(wifiP2PInfo == null || wifiP2PInfo!.groupOwnerAddress.isEmpty || hostDeviceName.isEmpty) ? "Not Connected" : hostDeviceName}",
+          const SizedBox(height: 10),
           Text(
-            "Host IP Address: ${wifiP2PInfo == null || wifiP2PInfo!.groupOwnerAddress.isEmpty ? "Not Connected" : wifiP2PInfo?.groupOwnerAddress.substring(1)}\n Host Name - ${(wifiP2PInfo == null || wifiP2PInfo!.groupOwnerAddress.isEmpty || hostDeviceName.isEmpty) ? "Not Connected" : hostDeviceName}",
+            (wifiP2PInfo == null || wifiP2PInfo!.groupOwnerAddress.isEmpty || hostDeviceName.isEmpty) ? '' : 'Host Name - $hostDeviceName',
             style: const TextStyle(
-              fontStyle: FontStyle.italic,
-              fontWeight: FontWeight.bold,
               fontSize: 20,
             ),
           ),
           const SizedBox(height: 10),
-          const Text("PEERS:"),
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                "LIST OF",
+                style: TextStyle(fontSize: 24),
+              ),
+              Text(
+                "AVAILABLE",
+                style: TextStyle(fontSize: 24),
+              ),
+              Text(
+                "HOSTS",
+                style: TextStyle(fontSize: 24),
+              ),
+            ],
+          ),
           SizedBox(
             height: 300,
             width: MediaQuery.of(context).size.width,
@@ -243,40 +259,20 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
               ),
             ),
           ),
-          IconButton(
-            onPressed: p2p_util_obj.disconnectFromHost,
-            icon: const Icon(Icons.group_remove),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 64),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton(onPressed: p2p_util_obj.disconnectFromHost, child: const Row(children: [Icon(Icons.group_remove), Text(" Disconnect")])),
+                TextButton(onPressed: p2p_util_obj.discover, child: const Row(children: [Icon(Icons.refresh_rounded), Text(" Refresh")])),
+              ],
+            ),
           ),
-          // ElevatedButton(
-          //   onPressed: () async {
-          //     var info = await _flutterP2pConnectionPlugin.groupInfo();
-          //     showDialog(
-          //       context: context,
-          //       builder: (context) => Center(
-          //         child: Dialog(
-          //           child: SizedBox(
-          //             height: 200,
-          //             child: Padding(
-          //               padding: const EdgeInsets.symmetric(horizontal: 10),
-          //               child: Column(
-          //                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          //                 crossAxisAlignment: CrossAxisAlignment.start,
-          //                 children: [
           //                   Text("groupNetworkName: ${info?.groupNetworkName}"),
           //                   Text("passPhrase: ${info?.passPhrase}"),
           //                   Text("isGroupOwner: ${info?.isGroupOwner}"),
           //                   Text("clients: ${info?.clients}"),
-          //                 ],
-          //               ),
-          //             ),
-          //           ),
-          //         ),
-          //       ),
-          //     );
-          //   },
-          //   child: const Text("get group info"),
-          // ),
-          IconButton(onPressed: p2p_util_obj.discover, icon: const Icon(Icons.refresh_rounded)),
         ],
       ),
     );

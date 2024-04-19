@@ -249,7 +249,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              'Fetching group owner address...',
+                              'Fetching address...',
                               style: TextStyle(fontSize: 24),
                             ),
                             SizedBox(height: 20), // Add some space between text and loading animation
