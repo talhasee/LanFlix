@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:restart_app/restart_app.dart';
 import 'package:flutter_p2p_connection/flutter_p2p_connection.dart';
+import 'package:streamer/client/video_utils.dart';
 import 'package:streamer/host/p2p_utils.dart';
 import 'package:streamer/utils/permissions.dart';
 
@@ -50,6 +51,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   StreamSubscription<WifiP2PInfo>? _streamWifiInfo;
   // ignore: unused_field
   StreamSubscription<List<DiscoveredPeers>>? _streamPeers;
+  late final video_utils player;
 
   String videoPath = "";
   HttpServer? server;
@@ -59,6 +61,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    player = video_utils(context: context);
     _init();
   }
 
@@ -282,7 +285,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                         ),
                         const SizedBox(height: 20),
                         Text(
-                          '${snapshot.data}',
+                          '${snapshot.data?.substring(1)}',
                           style: const TextStyle(fontSize: 24),
                         ),
                       ],
@@ -297,6 +300,14 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                       PlatformFile file = result.files.first;
                       logger.d("File Name: ${file.name}\nFile Path: ${file.path.toString()}");
                       await _startSerer(file.path.toString());
+
+                      //Start video on host side
+                      String videoPath = file.path.toString();
+                      try {
+                        player.startInitFromLocal(videoPath, 0);
+                      } catch (e) {
+                        logger.d("error in playing video $e" );
+                      }
                     }
                   },
                   child: const Text("File Select")),

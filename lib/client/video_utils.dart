@@ -1,4 +1,4 @@
-import 'dart:async';
+import 'dart:io';
 
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +8,7 @@ import 'package:back_button_interceptor/back_button_interceptor.dart';
 
 class VideoPlayerPage extends StatefulWidget {
   // final ChewieController chewieController;
+  
   final video_utils player;
 
   const VideoPlayerPage({Key? key, required this.player}) : super(key: key);
@@ -17,15 +18,18 @@ class VideoPlayerPage extends StatefulWidget {
 }
 
 class _VideoPlayerPageState extends State<VideoPlayerPage> {
+  bool isFullScreen = false;
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
     BackButtonInterceptor.add(myInterceptor);
+    widget.player.chewieController?.addListener(_onFullScreenChanged);
   }
 
   @override
   void dispose() {
+    widget.player.chewieController?.removeListener(_onFullScreenChanged);
     if (widget.player.chewieController != null && widget.player.videoPlayerController != null) {
       widget.player.dispose();
     }
@@ -38,39 +42,38 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
 
   bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
     logger.d("BACK BUTTON!");
-    if (mounted) {
-      Navigator.pop(context);
-    }
-    return false;
-  }
-  // Future<bool> myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
-  //   Completer<bool> completer = Completer<bool>();
-  //   showDialog<bool>(
-  //     context: context,
-  //     builder: (context) => AlertDialog(
-  //       title: Text("Exit Confirmation"),
-  //       content: Text("Do you really want to exit?"),
-  //       actions: <Widget>[
-  //         TextButton(
-  //           onPressed: () {
-  //             Navigator.pop(context); // source of all problems
-  //             completer.complete(true);
-  //           },
-  //           child: Text('Yes'),
-  //         ),
-  //         TextButton(
-  //           onPressed: () {
-  //             Navigator.pop(context); // source of all problems
-  //             completer.complete(false);
-  //           },
-  //           child: Text('No'),
-  //         ),
-  //       ],
-  //     ),
-  //   );
+    // if (mounted) {
+    //   Navigator.pop(context);
+    // }
 
-  //   return completer.future;
-  // }
+     // If the video player is in full-screen mode
+    if (isFullScreen) {
+      // Exit full-screen mode
+      widget.player.chewieController?.exitFullScreen();
+      setState(() {
+        isFullScreen = false;
+      });
+      // Prevent the default back button behavior
+      return true;
+    } else {
+      // Dispose of the video player and Chewie controller
+      // if (widget.player.chewieController != null && widget.player.videoPlayerController != null) {
+      //   widget.player.dispose();
+      // }
+      // Pop the current page and go back to the previous page
+      if (mounted) {
+        Navigator.pop(context);
+      }
+      return true;
+    }
+    return true;
+  }
+
+  void _onFullScreenChanged() {
+    setState(() {
+      isFullScreen = widget.player.chewieController?.isFullScreen ?? false;
+    });
+  }
 
   Widget build(BuildContext context) {
     return Scaffold(
@@ -112,9 +115,8 @@ class video_utils {
   VideoPlayerController? videoPlayerController;
   ChewieController? chewieController;
   final BuildContext context;
-  Route? clientPageRoute;
 
-  video_utils({required this.context, this.clientPageRoute});
+  video_utils({required this.context});
 
   var logger = Logger(
     printer: PrettyPrinter(),
@@ -141,6 +143,25 @@ class video_utils {
     );
 
     // clientPageRoute = ModalRoute.of(context);
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => VideoPlayerPage(
+          player: this,
+        ),
+      ),
+    );
+  }
+
+  void startInitFromLocal(String videoPath, int startAt) {
+    videoPlayerController = VideoPlayerController.file(File(videoPath));
+    chewieController = ChewieController(
+      videoPlayerController: videoPlayerController!,
+      isLive: true,
+      startAt: Duration(seconds: startAt),
+      showOptions: false,
+      autoPlay: true,
+    );
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => VideoPlayerPage(

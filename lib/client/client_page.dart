@@ -1,4 +1,3 @@
-// ignore_for_file: use_build_context_synchronously
 
 import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:flutter/material.dart';
@@ -48,6 +47,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   StreamSubscription<WifiP2PInfo>? _streamWifiInfo;
   StreamSubscription<List<DiscoveredPeers>>? _streamPeers;
   String videoUrl = "";
+  String hostDeviceName = "";
 
   final TextEditingController _urlController = TextEditingController();
 
@@ -58,6 +58,9 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     // BackButtonInterceptor.add(myInterceptor);
+    permissions = Permissions(p2pObj: _flutterP2pConnectionPlugin, context: context);
+    player = video_utils(context: context);
+    p2p_util_obj = p2p_utils(p2pObj: _flutterP2pConnectionPlugin, context: context, permissions: permissions, player: player);
     _init();
   }
 
@@ -93,11 +96,11 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         peers = event;
       });
     });
-    player = video_utils(context: context, clientPageRoute: ModalRoute.of(context));
-    permissions = Permissions(p2pObj: _flutterP2pConnectionPlugin, context: context);
+    // player = video_utils(context: context, clientPageRoute: ModalRoute.of(context));
+    // permissions = Permissions(p2pObj: _flutterP2pConnectionPlugin, context: context);
     permissions.checkPermissions();
     // to discover hosts
-    p2p_util_obj = p2p_utils(p2pObj: _flutterP2pConnectionPlugin, context: context, permissions: permissions, player: player);
+    // p2p_util_obj = p2p_utils(p2pObj: _flutterP2pConnectionPlugin, context: context, permissions: permissions, player: player);
     p2p_util_obj.discover();
   }
 
@@ -148,27 +151,26 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
-            "Host IP Address: ${wifiP2PInfo == null ? "null" : wifiP2PInfo?.groupOwnerAddress}",
+            "Host IP Address: ${wifiP2PInfo == null || wifiP2PInfo!.groupOwnerAddress.isEmpty ? "Not Connected" : wifiP2PInfo?.groupOwnerAddress.substring(1)}\n Host Name - ${(wifiP2PInfo == null ||  wifiP2PInfo!.groupOwnerAddress.isEmpty || hostDeviceName.isEmpty )? "Not Connected" : hostDeviceName}",
             style: const TextStyle(
               fontStyle: FontStyle.italic,
               fontWeight: FontWeight.bold,
               fontSize: 20,
             ),
           ),
-          // wifiP2PInfo != null
-          //     ? Text(
-          //         "connected: ${wifiP2PInfo?.isConnected}, isGroupOwner: ${wifiP2PInfo?.isGroupOwner}, groupFormed: ${wifiP2PInfo?.groupFormed}, groupOwnerAddress: ${wifiP2PInfo?.groupOwnerAddress}, clients: ${wifiP2PInfo?.clients}")
-          //     : const SizedBox.shrink(),
           const SizedBox(height: 10),
           const Text("PEERS:"),
           SizedBox(
-            height: 100,
+            height: 300,
             width: MediaQuery.of(context).size.width,
             child: ListView.builder(
               scrollDirection: Axis.vertical,
               itemCount: peers.length,
               itemBuilder: (context, index) => Center(
-                child: GestureDetector(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Center(
+                      child: GestureDetector(
                   onTap: () {
                     showDialog(
                       context: context,
@@ -196,6 +198,10 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                                 Navigator.of(context).pop();
                                 await p2p_util_obj.connectToHost(peers[index].deviceAddress);
 
+                                setState(() {
+                                  hostDeviceName = peers[index].deviceName;
+                                });
+
                                 while (wifiP2PInfo == null) {
                                   // logger.d("wifi - $wifiP2PInfo...group - ${wifiP2PInfo!.groupOwnerAddress.isEmpty}");
                                   await Future.delayed(const Duration(milliseconds: 200));
@@ -216,22 +222,26 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                   },
                   child: Container(
                     height: 80,
-                    width: 80,
+                    width: 300,
                     decoration: BoxDecoration(
                       color: Colors.grey,
                       borderRadius: BorderRadius.circular(50),
                     ),
                     child: Center(
                       child: Text(
-                        peers[index].deviceName.toString().characters.first.toUpperCase(),
+                        peers[index].deviceName.toString(),
                         style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 30,
+                          color: Colors.black,
+                          fontSize: 20,
                         ),
+                        overflow: TextOverflow.ellipsis, // Add this line
+                        softWrap: false, // Add this line
                       ),
                     ),
                   ),
                 ),
+                      )
+                  ),
               ),
             ),
           ),
