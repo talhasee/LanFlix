@@ -1,4 +1,6 @@
 // import 'dart:ffi';
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables
+
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
@@ -52,6 +54,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   // ignore: unused_field
   StreamSubscription<List<DiscoveredPeers>>? _streamPeers;
   late final video_utils player;
+  String fileName = "";
 
   String videoPath = "";
   HttpServer? server;
@@ -224,96 +227,119 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: Colors.green[300],
+        backgroundColor: Colors.white,
         appBar: AppBar(
-          backgroundColor: const Color.fromARGB(255, 5, 197, 78),
-          title: const Text('Flutter p2p connection plugin'),
+          backgroundColor: Colors.white,
+          leading: Image.asset("lib/assets/images/logo.png"),
         ),
         // ignore: prefer_const_constructors
         body: Center(
           // ignore: prefer_const_constructors
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
             // ignore: prefer_const_literals_to_create_immutables
             children: [
-              FutureBuilder<String>(
-                future: _addressFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Fetching group owner address...',
-                          style: TextStyle(fontSize: 24),
-                        ),
-                        SizedBox(height: 20), // Add some space between text and loading animation
-                        CircularProgressIndicator(),
-                      ],
-                    );
-                  } else if (snapshot.hasError || snapshot.data == null || snapshot.data == "null") {
-                    // If snapshot has error or data is null, show alert and restart the app
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      showDialog(
-                        context: context,
-                        barrierDismissible: false, // Prevent dismissing dialog by tapping outside
-                        builder: (BuildContext context) {
-                          return AlertDialog(
-                            title: const Text('Error'),
-                            content: const Text('Please restart your WiFi and open the app again.'),
-                            actions: <Widget>[
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                  _restartApp();
-                                },
-                                child: const Text('OK'),
-                              ),
-                            ],
+              Column(
+                children: [
+                  FutureBuilder<String>(
+                    future: _addressFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Fetching group owner address...',
+                              style: TextStyle(fontSize: 24),
+                            ),
+                            SizedBox(height: 20), // Add some space between text and loading animation
+                            CircularProgressIndicator(),
+                          ],
+                        );
+                      } else if (snapshot.hasError || snapshot.data == null || snapshot.data == "null") {
+                        // If snapshot has error or data is null, show alert and restart the app
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false, // Prevent dismissing dialog by tapping outside
+                            builder: (BuildContext context) {
+                              return AlertDialog(
+                                title: const Text('Error'),
+                                content: const Text('Please restart your WiFi and open the app again.'),
+                                actions: <Widget>[
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                      _restartApp();
+                                    },
+                                    child: const Text('OK'),
+                                  ),
+                                ],
+                              );
+                            },
                           );
-                        },
-                      );
-                    });
-                    return Container();
-                  } else {
-                    return Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text(
-                          'Group Owner Address',
-                          style: TextStyle(fontSize: 24),
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          '${snapshot.data?.substring(1)}',
-                          style: const TextStyle(fontSize: 24),
-                        ),
-                      ],
-                    );
-                  }
-                },
-              ),
-              ElevatedButton(
-                  onPressed: () async {
-                    FilePickerResult? result = await FilePicker.platform.pickFiles();
-                    if (result != null) {
-                      PlatformFile file = result.files.first;
-                      logger.d("File Name: ${file.name}\nFile Path: ${file.path.toString()}");
-                      await _startSerer(file.path.toString());
-
-                      //Start video on host side
-                      String videoPath = file.path.toString();
-                      try {
-                        player.startInitFromLocal(videoPath, 0);
-                      } catch (e) {
-                        logger.d("error in playing video $e" );
+                        });
+                        return Container();
+                      } else {
+                        return Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text(
+                              '  HOST IP\n ADDRESS',
+                              style: TextStyle(fontSize: 42),
+                            ),
+                            const SizedBox(height: 20),
+                            Text(
+                              '${snapshot.data?.substring(1)}',
+                              style: const TextStyle(fontSize: 24),
+                            ),
+                          ],
+                        );
                       }
-                    }
-                  },
-                  child: const Text("File Select")),
-              Text(
-                serverAddress,
-                style: const TextStyle(fontSize: 24),
+                    },
+                  ),
+                ],
+              ),
+              Column(
+                children: [
+                  Text(
+                    'SELECT MEIDA TO STREAM',
+                    style: TextStyle(fontSize: 22),
+                  ),
+                  SizedBox(height: 24),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: Color(0xffff5c00), shape: BeveledRectangleBorder()),
+                    onPressed: () async {
+                      FilePickerResult? result = await FilePicker.platform.pickFiles();
+                      if (result != null) {
+                        PlatformFile file = result.files.first;
+                        logger.d("File Name: ${file.name}\nFile Path: ${file.path.toString()}");
+                        setState(() {
+                          fileName = file.name;
+                        });
+                        await _startSerer(file.path.toString());
+                        //Start video on host side
+                        String videoPath = file.path.toString();
+                        try {
+                          player.startInitFromLocal(videoPath, 0);
+                        } catch (e) {
+                          logger.d("error in playing video $e");
+                        }
+                      }
+                    },
+                    child: const Text(
+                      "UPLOAD",
+                      style: TextStyle(color: Colors.white, fontSize: 18),
+                    ),
+                  ),
+                  SizedBox(
+                    height: 32,
+                  ),
+                  Text(
+                    fileName,
+                    style: TextStyle(fontSize: 16),
+                  )
+                ],
               ),
             ],
           ),

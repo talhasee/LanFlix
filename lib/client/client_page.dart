@@ -1,4 +1,3 @@
-
 import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
@@ -151,7 +150,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
-            "Host IP Address: ${wifiP2PInfo == null || wifiP2PInfo!.groupOwnerAddress.isEmpty ? "Not Connected" : wifiP2PInfo?.groupOwnerAddress.substring(1)}\n Host Name - ${(wifiP2PInfo == null ||  wifiP2PInfo!.groupOwnerAddress.isEmpty || hostDeviceName.isEmpty )? "Not Connected" : hostDeviceName}",
+            "Host IP Address: ${wifiP2PInfo == null || wifiP2PInfo!.groupOwnerAddress.isEmpty ? "Not Connected" : wifiP2PInfo?.groupOwnerAddress.substring(1)}\n Host Name - ${(wifiP2PInfo == null || wifiP2PInfo!.groupOwnerAddress.isEmpty || hostDeviceName.isEmpty) ? "Not Connected" : hostDeviceName}",
             style: const TextStyle(
               fontStyle: FontStyle.italic,
               fontWeight: FontWeight.bold,
@@ -168,80 +167,79 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
               itemCount: peers.length,
               itemBuilder: (context, index) => Center(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
                     child: Center(
                       child: GestureDetector(
-                  onTap: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => Center(
-                        child: AlertDialog(
-                          content: SizedBox(
-                            height: 200,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text("name: ${peers[index].deviceName}"),
-                                Text("address: ${peers[index].deviceAddress}"),
-                                Text("isGroupOwner: ${peers[index].isGroupOwner}"),
-                                Text("isServiceDiscoveryCapable: ${peers[index].isServiceDiscoveryCapable}"),
-                                Text("primaryDeviceType: ${peers[index].primaryDeviceType}"),
-                                Text("secondaryDeviceType: ${peers[index].secondaryDeviceType}"),
-                                Text("status: ${peers[index].status}"),
-                              ],
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => Center(
+                              child: AlertDialog(
+                                content: SizedBox(
+                                  height: 200,
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text("name: ${peers[index].deviceName}"),
+                                      Text("address: ${peers[index].deviceAddress}"),
+                                      Text("isGroupOwner: ${peers[index].isGroupOwner}"),
+                                      Text("isServiceDiscoveryCapable: ${peers[index].isServiceDiscoveryCapable}"),
+                                      Text("primaryDeviceType: ${peers[index].primaryDeviceType}"),
+                                      Text("secondaryDeviceType: ${peers[index].secondaryDeviceType}"),
+                                      Text("status: ${peers[index].status}"),
+                                    ],
+                                  ),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () async {
+                                      Navigator.of(context).pop();
+                                      await p2p_util_obj.connectToHost(peers[index].deviceAddress);
+
+                                      setState(() {
+                                        hostDeviceName = peers[index].deviceName;
+                                      });
+
+                                      while (wifiP2PInfo == null) {
+                                        // logger.d("wifi - $wifiP2PInfo...group - ${wifiP2PInfo!.groupOwnerAddress.isEmpty}");
+                                        await Future.delayed(const Duration(milliseconds: 200));
+                                      }
+                                      while (wifiP2PInfo!.groupOwnerAddress.isEmpty) {
+                                        await Future.delayed(const Duration(milliseconds: 200));
+                                      }
+
+                                      logger.d("Group owneradddress - ${wifiP2PInfo?.groupOwnerAddress}");
+                                      p2p_util_obj.connectToSocket(wifiP2PInfo!.groupOwnerAddress);
+                                    },
+                                    child: const Text("connect"),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          height: 80,
+                          width: 300,
+                          decoration: BoxDecoration(
+                            color: Colors.grey,
+                            borderRadius: BorderRadius.circular(50),
+                          ),
+                          child: Center(
+                            child: Text(
+                              peers[index].deviceName.toString(),
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontSize: 20,
+                              ),
+                              overflow: TextOverflow.ellipsis, // Add this line
+                              softWrap: false, // Add this line
                             ),
                           ),
-                          actions: [
-                            TextButton(
-                              onPressed: () async {
-                                Navigator.of(context).pop();
-                                await p2p_util_obj.connectToHost(peers[index].deviceAddress);
-
-                                setState(() {
-                                  hostDeviceName = peers[index].deviceName;
-                                });
-
-                                while (wifiP2PInfo == null) {
-                                  // logger.d("wifi - $wifiP2PInfo...group - ${wifiP2PInfo!.groupOwnerAddress.isEmpty}");
-                                  await Future.delayed(const Duration(milliseconds: 200));
-                                }
-                                while (wifiP2PInfo!.groupOwnerAddress.isEmpty) {
-                                  await Future.delayed(const Duration(milliseconds: 200));
-                                }
-
-                                logger.d("Group owneradddress - ${wifiP2PInfo?.groupOwnerAddress}");
-                                p2p_util_obj.connectToSocket(wifiP2PInfo!.groupOwnerAddress);
-                              },
-                              child: const Text("connect"),
-                            ),
-                          ],
                         ),
                       ),
-                    );
-                  },
-                  child: Container(
-                    height: 80,
-                    width: 300,
-                    decoration: BoxDecoration(
-                      color: Colors.grey,
-                      borderRadius: BorderRadius.circular(50),
-                    ),
-                    child: Center(
-                      child: Text(
-                        peers[index].deviceName.toString(),
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontSize: 20,
-                        ),
-                        overflow: TextOverflow.ellipsis, // Add this line
-                        softWrap: false, // Add this line
-                      ),
-                    ),
-                  ),
-                ),
-                      )
-                  ),
+                    )),
               ),
             ),
           ),
