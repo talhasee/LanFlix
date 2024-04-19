@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
@@ -39,8 +41,36 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
     if (mounted) {
       Navigator.pop(context);
     }
-    return true;
+    return false;
   }
+  // Future<bool> myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
+  //   Completer<bool> completer = Completer<bool>();
+  //   showDialog<bool>(
+  //     context: context,
+  //     builder: (context) => AlertDialog(
+  //       title: Text("Exit Confirmation"),
+  //       content: Text("Do you really want to exit?"),
+  //       actions: <Widget>[
+  //         TextButton(
+  //           onPressed: () {
+  //             Navigator.pop(context); // source of all problems
+  //             completer.complete(true);
+  //           },
+  //           child: Text('Yes'),
+  //         ),
+  //         TextButton(
+  //           onPressed: () {
+  //             Navigator.pop(context); // source of all problems
+  //             completer.complete(false);
+  //           },
+  //           child: Text('No'),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+
+  //   return completer.future;
+  // }
 
   Widget build(BuildContext context) {
     return Scaffold(

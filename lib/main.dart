@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'dart:async';
 import 'client/client_page.dart';
 import 'host/host_page.dart';
@@ -51,39 +52,50 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Flutter p2p connection plugin'),
+        leading: Image.asset('lib/assets/images/logo.png'),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: GestureDetector(
-              onTap: hostPageDirect,
-              child: Container(
-                color: Colors.green[700],
-                child: const Center(
-                  child: Text(
-                    "Host",
-                    style: TextStyle(color: Colors.white, fontSize: 44),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Image.asset('lib/assets/images/logo_tag.png'),
+            const SizedBox(
+              height: 64,
+            ),
+            Expanded(
+              child: GestureDetector(
+                onTap: hostPageDirect,
+                child: Container(
+                  decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(26)), color: Color(0xffff5C00)),
+                  margin: const EdgeInsets.symmetric(horizontal: 64, vertical: 40),
+                  child: const Center(
+                    child: Text(
+                      "Host",
+                      style: TextStyle(color: Colors.white, fontSize: 44),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-          Expanded(
-            child: GestureDetector(
-              onTap: clientPageDirect,
-              child: Container(
-                color: Colors.amber[700],
-                child: const Center(
-                  child: Text(
-                    "Client",
-                    style: TextStyle(color: Colors.white, fontSize: 44),
+            Expanded(
+              child: GestureDetector(
+                onTap: clientPageDirect,
+                child: Container(
+                  decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(26)), color: Color(0xfff4f4f4)),
+                  margin: const EdgeInsets.symmetric(horizontal: 64, vertical: 40),
+                  child: const Center(
+                    child: Text(
+                      "Client",
+                      style: TextStyle(color: Colors.black, fontSize: 44),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+            const SizedBox(
+              height: 64,
+            ),
+          ],
+        ),
       ),
     );
   }
