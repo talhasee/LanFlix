@@ -129,10 +129,10 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     );
   }
 
-  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
-    logger.d("BACK BUTTON!");
-    return true;
-  }
+  // bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
+  //   logger.d("BACK BUTTON!");
+  //   return true;
+  // }
 
   var logger = Logger(
     printer: PrettyPrinter(),

@@ -8,7 +8,7 @@ import 'package:back_button_interceptor/back_button_interceptor.dart';
 
 class VideoPlayerPage extends StatefulWidget {
   // final ChewieController chewieController;
-  
+
   final video_utils player;
 
   const VideoPlayerPage({Key? key, required this.player}) : super(key: key);
@@ -33,6 +33,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
     if (widget.player.chewieController != null && widget.player.videoPlayerController != null) {
       widget.player.dispose();
     }
+    BackButtonInterceptor.remove(myInterceptor);
     super.dispose();
   }
 
@@ -46,25 +47,29 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
     //   Navigator.pop(context);
     // }
 
-     // If the video player is in full-screen mode
+    // If the video player is in full-screen mode
+    logger.d("FUllscreen - $isFullScreen, mounted - $mounted");
+    // if (!mounted) mounted = true;
     if (isFullScreen) {
       // Exit full-screen mode
-      widget.player.chewieController?.exitFullScreen();
-      setState(() {
-        isFullScreen = false;
-      });
+      // widget.player.chewieController?.exitFullScreen();
+      // setState(() {
+      //   isFullScreen = false;
+      // });
+
       // Prevent the default back button behavior
-      return true;
-    } else {
-      // Dispose of the video player and Chewie controller
-      // if (widget.player.chewieController != null && widget.player.videoPlayerController != null) {
-      //   widget.player.dispose();
-      // }
-      // Pop the current page and go back to the previous page
-      if (mounted) {
-        Navigator.pop(context);
-      }
-      return true;
+      return false;
+    }
+    // Dispose of the video player and Chewie controller
+    // if (widget.player.chewieController != null && widget.player.videoPlayerController != null) {
+    //   widget.player.dispose();
+    // }
+    // Pop the current page and go back to the previous page
+    logger.d("Here");
+    logger.d(mounted);
+    if (mounted) {
+      logger.d("Here inside");
+      Navigator.of(context).pop();
     }
     return true;
   }
