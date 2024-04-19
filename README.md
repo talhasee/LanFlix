@@ -1,13 +1,3 @@
-# streamer
-
-A new Flutter project.
-- give host a button to close group then user will redirect to main.dart else if user closes the app then group does get removed and causes issue
-later on in creation.
-
-- ISSUE: New users are also getting alert of please restart your wifi. Need to resolve that.
-
-- Fix jugaad
-
-- serialize network obj
-
-- send host's ip:port to clients
+# LanFlix 
+- It is a Flutter application that enables users to stream and share video content without an internet connection, utilizing Wi-Fi Direct technology.
+- Designed to enhance media accessibility in remote areas, during commutes, or at local gatherings, LanFlix features nearby communication without internet reliance, high-quality video streaming up to 1080p, and TCP-based reliable data transfer. - Its user-friendly interface ensures easy setup and interaction, making it ideal for diverse usage scenarios.
