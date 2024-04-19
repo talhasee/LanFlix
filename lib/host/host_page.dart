@@ -1,15 +1,18 @@
+// import 'dart:ffi';
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables
+
 import 'dart:io';
+import 'dart:math';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/services.dart';
 import 'package:logger/logger.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:restart_app/restart_app.dart';
 import 'package:flutter_p2p_connection/flutter_p2p_connection.dart';
-import '../utils/permissions.dart';
-import 'package:shelf/shelf.dart' as shelf;
-import 'package:shelf/shelf_io.dart' as shelf_io;
-import 'package:flutter_ffmpeg/flutter_ffmpeg.dart';
-import 'package:path/path.dart' as p;
+import 'package:streamer/client/video_utils.dart';
+import 'package:streamer/host/p2p_utils.dart';
+import 'package:streamer/utils/permissions.dart';
 
 void main() {
   runApp(const HostPage());
@@ -42,13 +45,22 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   final TextEditingController msgText = TextEditingController();
   final _flutterP2pConnectionPlugin = FlutterP2pConnection();
   late final Permissions permissions;
+  late final p2p_utils p2p_util_obj;
   List<DiscoveredPeers> peers = [];
   bool hasPermission = false;
   WifiP2PInfo? wifiP2PInfo;
+  String serverAddress = "";
+  String pin = "";
+  String showPinTxt = "";
+  final ListOfWidgets = <Widget>[Text("Private"), Text("Public")];
+  final List<bool> _selectedToggle = <bool>[false, true];
+  // String netState =
   // ignore: unused_field
   StreamSubscription<WifiP2PInfo>? _streamWifiInfo;
   // ignore: unused_field
   StreamSubscription<List<DiscoveredPeers>>? _streamPeers;
+  late final video_utils player;
+  String fileName = "";
 
   String videoPath = "";
   HttpServer? server;
@@ -58,6 +70,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    player = video_utils(context: context);
     _init();
   }
 
@@ -69,6 +82,8 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _streamWifiInfo?.cancel();
+    _streamPeers?.cancel();
     closeServer();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -84,28 +99,14 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     } else if (state == AppLifecycleState.resumed) {
       _flutterP2pConnectionPlugin.register();
     }
-
-    // switch (state) {
-    //   case AppLifecycleState.resumed:
-    //     _flutterP2pConnectionPlugin.register();
-    //     break;
-    //   case AppLifecycleState.inactive:
-    //   case AppLifecycleState.paused:
-    //     _flutterP2pConnectionPlugin.unregister();
-    //     break;
-    //   case AppLifecycleState.hidden:
-    //   case AppLifecycleState.detached:
-    //     // dispose();
-    //     // break;
-    // }
   }
 
   void _init() async {
     await _flutterP2pConnectionPlugin.initialize();
     await _flutterP2pConnectionPlugin.register();
-    _streamWifiInfo =
-        _flutterP2pConnectionPlugin.streamWifiP2PInfo().listen((event) {
+    _streamWifiInfo = _flutterP2pConnectionPlugin.streamWifiP2PInfo().listen((event) {
       setState(() {
+        // logger.d("Setting state of wifip2pinfo");
         wifiP2PInfo = event;
       });
     });
@@ -121,8 +122,17 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     //check location, wifi and Storage permission
     bool hasPermission = await permissions.checkPermissions();
     if (!hasPermission) {
-      snack("Permission de de chup chap se varna phone hack hoga tera");
+      snack("Don't have the required permissions to run the app.");
     }
+    if (wifiP2PInfo == null) {
+      logger.d("yes its null");
+    }
+    p2p_util_obj = p2p_utils(
+        p2pObj: _flutterP2pConnectionPlugin,
+        // ignore: use_build_context_synchronously
+        context: context,
+        permissions: permissions,
+        wifiP2PInfo: wifiP2PInfo);
     _addressFuture = groupCreation();
   }
 
@@ -133,135 +143,35 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     Below there is a jugaad of introducing a 2 sec delay after each 
     function call, create group and remove group will wait for each
     other.
+    // TODO: Reduce delay time to milisecs
     */
 
     //starting group formation
-    bool created = await createGroup();
+    bool created = await p2p_util_obj.createGroup();
 
     snack("CREATION1 $created");
     if (!created) {
-      await removeGroup();
+      await p2p_util_obj.removeGroup();
     }
 
     await Future.delayed(const Duration(seconds: 2));
-    bool createdAgain = await createGroup();
+    bool createdAgain = await p2p_util_obj.createGroup();
     snack("CREATION2 $createdAgain");
 
     if (createdAgain || created) {
       //start socket so that whenever client comes no need to connect it manually
       // bool? discovering = await discover();
       // snack("discovering $discovering");
-      discover();
-      startSocket();
+      if (wifiP2PInfo == null) {
+        logger.d("Inside wifip2pinfo is null");
+      }
+      p2p_util_obj.wifiP2PInfo = wifiP2PInfo;
+      logger.d("Group created!!");
+      p2p_util_obj.discover();
+      p2p_util_obj.startSocket();
     }
     String addr = (wifiP2PInfo?.groupOwnerAddress).toString();
     return addr;
-  }
-
-  Future<bool> discover() async {
-    return await _flutterP2pConnectionPlugin.discover();
-  }
-  Future<shelf.Response> _handleRequest(shelf.Request request) async {
-    logger.d("INSIDE HANDLER REQUEST ${request.url.path}");
-
-    if (request.url.path == 'video/stream') {
-      // Assuming videoFilePath is the path to the selected video file
-      String videoFilePath = videoPath;
-
-      logger.d("Video File path - $videoFilePath");
-
-      // Get the directory of the video file
-      String videoDirectory = p.dirname(videoFilePath);
-      String outputDirectory =
-          p.join(videoDirectory, 'hls_output'); // Output directory within the video directory
-
-      Directory(outputDirectory).createSync(
-          recursive: true); // Create the output directory if it doesn't exist
-
-      // Generate HLS content using flutter_ffmpeg
-      var ffmpeg = FlutterFFmpeg();
-
-      try {
-        // Use a faster preset and higher bitrate for better performance
-        await ffmpeg.execute(
-          '-i $videoFilePath -c:v libx264 -preset veryfast -b:v 2500k -r 30 -vf scale=1280:-1 -f hls -hls_time 6 -hls_list_size 10 -hls_segment_filename $outputDirectory/%03d.ts $outputDirectory/index.m3u8',
-        );
-      } catch (e) {
-        logger.d("Error in ffmpeg - $e");
-        return shelf.Response.internalServerError(
-            body: 'Error processing video');
-      }
-
-      // Serve the HLS files from the output directory
-      var file = File(p.join(outputDirectory, 'index.m3u8'));
-      return shelf.Response.ok(await file.readAsString(),
-          headers: {'Content-Type': 'application/vnd.apple.mpegurl'});
-    } else {
-      return shelf.Response.notFound('Not Found');
-    }
-  }
-
-  // Future<shelf.Response> _handleRequest(shelf.Request request) async {
-  //   logger.d("INSIDE HANDLER REQUEST ${request.url.path}");
-  //   if (request.url.path == 'video/stream') {
-  //     // Assuming videoFilePath is the path to the selected video file
-  //     String videoFilePath = videoPath;
-  //     logger.d("Video File path - $videoFilePath");
-
-  //     // Get the directory of the video file
-  //     String videoDirectory = p.dirname(videoFilePath);
-  //     String outputDirectory = p.join(videoDirectory,
-  //         'hls_output'); // Output directory within the video directory
-  //     Directory(outputDirectory).createSync(
-  //         recursive: true); // Create the output directory if it doesn't exist
-
-  //     // Generate HLS content using flutter_ffmpeg
-  //     var ffmpeg = FlutterFFmpeg();
-  //     try {
-  //       //   await ffmpeg.execute(
-  //       //   '-i $videoFilePath -c:v libx264 -g 32 -sc_threshold 0 '
-  //       //   '-b:v 2500k -b:a 128k -ac 2 -ar 44100 -f hls -hls_time 10 -hls_list_size 0 '
-  //       //   '-hls_segment_filename $outputDirectory/%03d.ts $outputDirectory/index.m3u8',
-  //       // ); 
-  //       await ffmpeg.execute(
-  //   '-i $videoFilePath -c:v libx264 -b:v 1000k -r 30 -vf scale=1280:-1 -preset slow -f hls -hls_time 10 -hls_list_size 0 -hls_segment_filename $outputDirectory/%03d.ts $outputDirectory/index.m3u8',
-  // );
-
-
-  //     } catch (e) {
-  //       logger.d("Error in ffmpeg - $e");
-  //       return shelf.Response.internalServerError(
-  //           body: 'Error processing video');
-  //     }
-
-  //     // Serve the HLS files from the output directory
-  //     var file = File(p.join(outputDirectory, 'index.m3u8'));
-  //     return shelf.Response.ok(await file.readAsString(),
-  //         headers: {'Content-Type': 'application/vnd.apple.mpegurl'});
-  //   } else {
-  //     return shelf.Response.notFound('Not Found');
-  //   }
-  // }
-
-  void createShelfHandler() async {
-    var handler = const shelf.Pipeline()
-        .addMiddleware(shelf.logRequests())
-        .addHandler(_handleRequest);
-
-    // logger.d("${InternetAddress.anyIPv4}");
-
-    String? ip = await _flutterP2pConnectionPlugin.getIPAddress();
-    logger.d("FLUTTER IP - $ip");
-    sendDataAsMessage("&HOST_IP$ip");
-
-    try {
-      // Bind the handler to a port
-      server = await shelf_io.serve(handler, ip.toString(), 8080);
-      logger.d('HTTP Server listening on port 8080');
-    } catch (e) {
-      logger.d('Error starting HTTP server: $e');
-      // Handle the error, log it, or take appropriate action
-    }
   }
 
   void closeServer() {
@@ -284,151 +194,9 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
 
     videoPath = (file.path).toString();
   }
-  //create group
-
-  Future<bool> createGroup() async {
-    bool enabledLocation = await permissions.isLocationEnabled();
-    bool? groupFormed = wifiP2PInfo?.groupFormed;
-    if (enabledLocation && (groupFormed == null || groupFormed == false)) {
-      bool groupDeletion = await _flutterP2pConnectionPlugin.createGroup();
-      snack("Creating group $enabledLocation,  $groupFormed, $groupDeletion");
-      return groupDeletion;
-    } else if (!enabledLocation) {
-      snack("Please turn on Location!! $enabledLocation,  $groupFormed");
-      permissions.enableLocation();
-    } else if (groupFormed != null && groupFormed) {
-      snack("Please remove or disconnect earlier group!!");
-      return false;
-    }
-    // snack("Remove old group first!!!");
-    return false;
-  }
-
-  //remove Group
-
-  Future<bool> removeGroup() async {
-    bool enabledLocation = await permissions.isLocationEnabled();
-    bool? groupFormed = wifiP2PInfo?.groupFormed;
-    if (enabledLocation && (groupFormed != null && groupFormed == true)) {
-      bool groupDeletion = await _flutterP2pConnectionPlugin.removeGroup();
-      snack("Removing group $enabledLocation,  $groupFormed, $groupDeletion");
-      return groupDeletion;
-    } else if (!enabledLocation) {
-      snack("Please turn on Location!! $enabledLocation,  $groupFormed");
-      permissions.enableLocation();
-      return false;
-    } else if (groupFormed == null || groupFormed == false) {
-      snack("No group to remove!!");
-      return false;
-    }
-    // snack("Remove old group first!!!");
-    return false;
-  }
-
-  Future startSocket() async {
-    if (wifiP2PInfo != null) {
-      bool started = await _flutterP2pConnectionPlugin.startSocket(
-        groupOwnerAddress: wifiP2PInfo!.groupOwnerAddress,
-        downloadPath: "/storage/emulated/0/Download/",
-        maxConcurrentDownloads: 2,
-        deleteOnError: true,
-        onConnect: (name, address) {
-          snack("$name connected to socket with address: $address");
-        },
-        transferUpdate: (transfer) {
-          if (transfer.completed) {
-            snack(
-                "${transfer.failed ? "failed to ${transfer.receiving ? "receive" : "send"}" : transfer.receiving ? "received" : "sent"}: ${transfer.filename}");
-          }
-          print(
-              "ID: ${transfer.id}, FILENAME: ${transfer.filename}, PATH: ${transfer.path}, COUNT: ${transfer.count}, TOTAL: ${transfer.total}, COMPLETED: ${transfer.completed}, FAILED: ${transfer.failed}, RECEIVING: ${transfer.receiving}");
-        },
-        receiveString: (req) async {
-          snack(req);
-        },
-      );
-      snack("open socket: $started");
-    }
-  }
-
-  Future connectToSocket() async {
-    if (wifiP2PInfo != null) {
-      await _flutterP2pConnectionPlugin.connectToSocket(
-        groupOwnerAddress: wifiP2PInfo!.groupOwnerAddress,
-        downloadPath: "/storage/emulated/0/Download/",
-        maxConcurrentDownloads: 3,
-        deleteOnError: true,
-        onConnect: (address) {
-          snack("connected to socket: $address");
-        },
-        transferUpdate: (transfer) {
-          // if (transfer.count == 0) transfer.cancelToken?.cancel();
-          if (transfer.completed) {
-            snack(
-                "${transfer.failed ? "failed to ${transfer.receiving ? "receive" : "send"}" : transfer.receiving ? "received" : "sent"}: ${transfer.filename}");
-          }
-          print(
-              "ID: ${transfer.id}, FILENAME: ${transfer.filename}, PATH: ${transfer.path}, COUNT: ${transfer.count}, TOTAL: ${transfer.total}, COMPLETED: ${transfer.completed}, FAILED: ${transfer.failed}, RECEIVING: ${transfer.receiving}");
-        },
-        receiveString: (req) async {
-          snack(req);
-        },
-      );
-    }
-  }
-
-  Future closeSocketConnection() async {
-    bool closed = _flutterP2pConnectionPlugin.closeSocket();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          "closed: $closed",
-        ),
-      ),
-    );
-  }
-
-
-  Future sendMessage() async {
-    _flutterP2pConnectionPlugin.sendStringToSocket(msgText.text);
-  }
 
   Future sendDataAsMessage(String mssg) async {
     _flutterP2pConnectionPlugin.sendStringToSocket(mssg);
-  }
-
-  Future sendFile(bool phone) async {
-    // String? filePath = await FilesystemPicker.open(
-    //   context: context,
-    //   rootDirectory: Directory(phone ? "/storage/emulated/0/" : "/storage/"),
-    //   fsType: FilesystemType.file,
-    //   fileTileSelectMode: FileTileSelectMode.wholeTile,
-    //   showGoUp: true,
-    //   folderIconColor: Colors.blue,
-    // );
-    FilePickerResult? result = await FilePicker.platform.pickFiles();
-    if (result == null) {
-      snack("Please select a File");
-      return;
-    }
-    PlatformFile file = result.files.first;
-    if (file.path == null) {
-      return;
-    }
-    snack("File Name: ${file.name}");
-    // if (filePath == null) return;
-    List<TransferUpdate>? updates =
-        await _flutterP2pConnectionPlugin.sendFiletoSocket(
-      [
-        (file.path).toString(),
-        // "/storage/emulated/0/Download/Likee_7100105253123033459.mp4",
-        // "/storage/0E64-4628/Download/Adele-Set-Fire-To-The-Rain-via-Naijafinix.com_.mp3",
-        // "/storage/0E64-4628/Flutter SDK/p2p_plugin.apk",
-        // "/storage/emulated/0/Download/03 Omah Lay - Godly (NetNaija.com).mp3",
-        // "/storage/0E64-4628/Download/Adele-Set-Fire-To-The-Rain-via-Naijafinix.com_.mp3",
-      ],
-    );
-    print(updates);
   }
 
   void snack(String msg) async {
@@ -446,103 +214,181 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     printer: PrettyPrinter(),
   );
 
+  static const platform = MethodChannel('http.server');
+
+  Future<void> _startSerer(String filePath) async {
+    try {
+      String addr = await platform.invokeMethod('startVideoStream', {'videoPath': filePath}) as String;
+      logger.d("Started video stream at $addr");
+      setState(() {
+        serverAddress = addr;
+      });
+      sendDataAsMessage("&VIDEO$serverAddress|8|$pin"); // add duration here
+    } on PlatformException catch (e) {
+      logger.d("Error in platform channel");
+      logger.e(e);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: Colors.green[300],
+        backgroundColor: Colors.white,
         appBar: AppBar(
-          backgroundColor: const Color.fromARGB(255, 5, 197, 78),
-          title: const Text('Flutter p2p connection plugin'),
+          backgroundColor: Colors.white,
+          leading: Image.asset("lib/assets/images/logo.png"),
         ),
         // ignore: prefer_const_constructors
         body: Center(
           // ignore: prefer_const_constructors
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
             // ignore: prefer_const_literals_to_create_immutables
             children: [
-              FutureBuilder<String>(
-                future: _addressFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Fetching group owner address...',
-                          style: TextStyle(fontSize: 24),
-                        ),
-                        SizedBox(
-                            height:
-                                20), // Add some space between text and loading animation
-                        CircularProgressIndicator(),
-                      ],
-                    );
-                  } else if (snapshot.hasError ||
-                      snapshot.data == null ||
-                      snapshot.data == "null") {
-                    // If snapshot has error or data is null, show alert and restart the app
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      showDialog(
-                        context: context,
-                        barrierDismissible:
-                            false, // Prevent dismissing dialog by tapping outside
-                        builder: (BuildContext context) {
-                          return AlertDialog(
-                            title: const Text('Error'),
-                            content: const Text(
-                                'Please restart your WiFi and open the app again.'),
-                            actions: <Widget>[
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                  _restartApp();
-                                },
-                                child: const Text('OK'),
-                              ),
-                            ],
+              Column(
+                children: [
+                  FutureBuilder<String>(
+                    future: _addressFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Fetching address...',
+                              style: TextStyle(fontSize: 24),
+                            ),
+                            SizedBox(height: 14), // Add some space between text and loading animation
+                            CircularProgressIndicator(),
+                          ],
+                        );
+                      } else if (snapshot.hasError || snapshot.data == null || snapshot.data == "null") {
+                        // If snapshot has error or data is null, show alert and restart the app
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false, // Prevent dismissing dialog by tapping outside
+                            builder: (BuildContext context) {
+                              return AlertDialog(
+                                title: const Text('Error'),
+                                content: const Text('Please restart your WiFi and open the app again.'),
+                                actions: <Widget>[
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                      _restartApp();
+                                    },
+                                    child: const Text('OK'),
+                                  ),
+                                ],
+                              );
+                            },
                           );
-                        },
-                      );
-                    });
-                    return Container();
-                  } else {
-                    return Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text(
-                          'Group Owner Address',
-                          style: TextStyle(fontSize: 24),
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          '${snapshot.data}',
-                          style: TextStyle(fontSize: 24),
-                        ),
-                      ],
-                    );
-                  }
-                },
+                        });
+                        return Container();
+                      } else {
+                        return Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text(
+                              '  HOST IP\n ADDRESS',
+                              style: TextStyle(fontSize: 42),
+                            ),
+                            const SizedBox(height: 20),
+                            Text(
+                              '${snapshot.data?.substring(1)}',
+                              style: const TextStyle(fontSize: 24),
+                            ),
+                          ],
+                        );
+                      }
+                    },
+                  ),
+                ],
               ),
-              ElevatedButton(
-                  onPressed: () async {
-                    FilePickerResult? result =
-                        await FilePicker.platform.pickFiles();
-                    if (result != null) {
-                      PlatformFile file = result.files.first;
-                      print("File Name: ${file.name}\nFile Path: ${file.path}");
-                      logger.d(
-                          "File Name: ${file.name}\nFile Path: ${file.path}");
-                      snack("File Name: ${file.name}");
-                      snack("File Path: ${file.path}");
-                    }
-                  },
-                  child: const Text("File Select")),
-              ElevatedButton(
-                  onPressed: selectVideoFile, child: Text("Select Video File")),
-              ElevatedButton(
-                  onPressed: createShelfHandler,
-                  child: Text("Start Video server")),
+              Column(
+                children: [
+                  ToggleButtons(
+                    direction: Axis.horizontal,
+                    onPressed: (int index) {
+                      setState(() {
+                        // The button that is tapped is set to true, and the others to false.
+                        for (int i = 0; i < _selectedToggle.length; i++) {
+                          _selectedToggle[i] = i == index;
+                          if (index == 0) {
+                            setState(() {
+                              pin = (1000 + Random().nextInt(9000)).toString();
+                              showPinTxt = "PIN:  $pin";
+                            });
+                          } else {
+                            pin == "----";
+                            showPinTxt = "";
+                          }
+                        }
+                      });
+                    },
+                    borderRadius: const BorderRadius.all(Radius.circular(8)),
+                    selectedBorderColor: Colors.red[700],
+                    selectedColor: Colors.white,
+                    fillColor: Color(0xffff5c00),
+                    color: Color(0xffff5c00),
+                    constraints: const BoxConstraints(
+                      minHeight: 40.0,
+                      minWidth: 80.0,
+                    ),
+                    isSelected: _selectedToggle,
+                    children: ListOfWidgets,
+                  ),
+                  SizedBox(
+                    height: 8,
+                  ),
+                  Text(
+                    showPinTxt,
+                    style: TextStyle(fontSize: 22),
+                  ),
+                ],
+              ),
+              Column(
+                children: [
+                  Text(
+                    'SELECT MEDIA TO STREAM',
+                    style: TextStyle(fontSize: 22),
+                  ),
+                  SizedBox(height: 24),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: Color(0xffff5c00), shape: BeveledRectangleBorder()),
+                    onPressed: () async {
+                      FilePickerResult? result = await FilePicker.platform.pickFiles();
+                      if (result != null) {
+                        PlatformFile file = result.files.first;
+                        logger.d("File Name: ${file.name}\nFile Path: ${file.path.toString()}");
+                        setState(() {
+                          fileName = file.name;
+                        });
+                        await _startSerer(file.path.toString());
+                        //Start video on host side
+                        String videoPath = file.path.toString();
+                        try {
+                          player.startInitFromLocal(videoPath, 0);
+                        } catch (e) {
+                          logger.d("error in playing video $e");
+                        }
+                      }
+                    },
+                    child: const Text(
+                      "UPLOAD",
+                      style: TextStyle(color: Colors.white, fontSize: 18),
+                    ),
+                  ),
+                  SizedBox(
+                    height: 22,
+                  ),
+                  Text(
+                    fileName,
+                    style: TextStyle(fontSize: 16),
+                  )
+                ],
+              ),
             ],
           ),
         ));

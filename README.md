@@ -6,6 +6,8 @@ later on in creation.
 
 - ISSUE: New users are also getting alert of please restart your wifi. Need to resolve that.
 
-- Fix jugaad (partially fixed).
+- Fix jugaad
 
-- Find host device name on host side.
+- serialize network obj
+
+- send host's ip:port to clients
