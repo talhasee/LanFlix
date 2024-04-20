@@ -50,7 +50,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   bool hasPermission = false;
   WifiP2PInfo? wifiP2PInfo;
   String serverAddress = "";
-  String pin = "";
+  String pin = "----";
   String showPinTxt = "";
   final ListOfWidgets = <Widget>[Text("Private"), Text("Public")];
   final List<bool> _selectedToggle = <bool>[false, true];
@@ -223,6 +223,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       setState(() {
         serverAddress = addr;
       });
+      logger.d("PIN -> $pin......server - $serverAddress");
       sendDataAsMessage("&VIDEO$serverAddress|8|$pin"); // add duration here
     } on PlatformException catch (e) {
       logger.d("Error in platform channel");
@@ -321,11 +322,14 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                               showPinTxt = "PIN:  $pin";
                             });
                           } else {
-                            pin == "----";
-                            showPinTxt = "";
+                            setState(() {
+                              pin == "----";
+                              showPinTxt = "";
+                            });
                           }
                         }
                       });
+                      logger.d("PIN - $pin....PIN TEXT - $showPinTxt");
                     },
                     borderRadius: const BorderRadius.all(Radius.circular(8)),
                     selectedBorderColor: Colors.red[700],
