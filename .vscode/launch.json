@@ -31,7 +31,7 @@
             "name": "Poco",
             "request": "launch",
             "type": "dart",
-            "deviceId": "d9e32685"
+            "deviceId": "192.168.254.64:42605"
         },
         {
             "name": "Emulator",

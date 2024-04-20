@@ -102,16 +102,24 @@ class p2p_utils {
             int startAt = int.parse(videoData[1]);
             String pin = videoData[2];
             // logger.d("MESSAGE - $hostIpAddress");
+            logger.d("PIN - $pin");
+            bool otpVerified = true;
             if (pin != '----') {
-              bool otpVerified = await Navigator.push(
+              logger.d("PIN inside - $msg");
+
+              otpVerified = await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => OTPScreen(myCode: pin),
                 ),
               );
-              if (otpVerified) {
-                player.startInit("http://$hostIpAddress/", startAt, pin);
-              }
+             
+            }
+
+            logger.d("OTP - $otpVerified");
+            if (otpVerified) {
+              logger.d("PIN player inside - $pin");
+              player.startInit("http://$hostIpAddress/", startAt, pin);
             }
           }
         },
