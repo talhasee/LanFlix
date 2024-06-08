@@ -53,11 +53,57 @@ class MainActivity : FlutterActivity() {
             val file = File(videoFilePath)
 
             return if (file.exists() && !file.isDirectory) {
-                val response = newChunkedResponse(
-                    Response.Status.OK,
-                    "video/mp4",
-                    FileInputStream(file)
-                )
+                val response: Response
+                if (videoFilePath.endsWith(".mp4", ignoreCase = true)) {
+                    response = newChunkedResponse(
+                        Response.Status.OK,
+                        "video/mp4",
+                        FileInputStream(file)
+                    )
+                } else if (videoFilePath.endsWith(".avi", ignoreCase = true)) {
+                    response = newChunkedResponse(
+                        Response.Status.OK,
+                        "video/x-msvideo",
+                        FileInputStream(file)
+                    )
+                } else if (videoFilePath.endsWith(".mkv", ignoreCase = true)) {
+                    response = newChunkedResponse(
+                        Response.Status.OK,
+                        "video/x-matroska",
+                        FileInputStream(file)
+                    )
+                } else if (videoFilePath.endsWith(".mov", ignoreCase = true)) {
+                    response = newChunkedResponse(
+                        Response.Status.OK,
+                        "video/quicktime", // MIME type for QuickTime MOV videos
+                        FileInputStream(file)
+                    )
+                } else if (videoFilePath.endsWith(".flv", ignoreCase = true)) {
+                    response = newChunkedResponse(
+                        Response.Status.OK,
+                        "video/x-flv", // MIME type for Flash Video (FLV)
+                        FileInputStream(file)
+                    )
+                } else if (videoFilePath.endsWith(".wmv", ignoreCase = true)) {
+                    response = newChunkedResponse(
+                        Response.Status.OK,
+                        "video/x-ms-wmv", // MIME type for Windows Media Video (WMV)
+                        FileInputStream(file)
+                    )
+                } else if (videoFilePath.endsWith(".webm", ignoreCase = true)) {
+                    response = newChunkedResponse(
+                        Response.Status.OK,
+                        "video/webm", // MIME type for WebM videos
+                        FileInputStream(file)
+                    )
+                } else {
+                    // Handle other video formats or return an error
+                    return newFixedLengthResponse(
+                        Response.Status.NOT_FOUND,
+                        MIME_PLAINTEXT,
+                        "Unsupported video format."
+                    )
+                }
                 response.addHeader("Content-Length", file.length().toString())
                 response
             } else {
